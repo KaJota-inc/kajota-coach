@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Kajota Coach",
+    "slug": "kajota-coach",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F15A32"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "io.kajota.coach",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Kajota Coach needs the camera to capture product photos that the AI will turn into a listing draft.",
+        "NSPhotoLibraryUsageDescription": "Kajota Coach needs access to your photos so you can choose an existing product photo for the AI to draft from."
+      }
+    },
+    "android": {
+      "package": "io.kajota.coach",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#F15A32"
+      },
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "scheme": "kajota-coach",
+    "extra": {
+      "kajotaApiBaseUrl": "https://kajota-mobile-backend-2.onrender.com/kajota-mobile-backend"
+    }
+  }
+}
