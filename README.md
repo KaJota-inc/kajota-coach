@@ -2,7 +2,7 @@
 
 > An AI co-pilot that turns a single product photo into a complete co-sell listing — title, description, suggested price, suggested co-sell markup, and ready-to-share WhatsApp + Instagram captions — in about 8 seconds.
 
-**Hackathon submissions:** TechHub Africa Hackathon 2026 · AWS Prompt the Planet Challenge.
+**Hackathon submissions:** AI Agent Olympics 2026 (Milan AI Week, lablab.ai) · TechHub Africa Hackathon 2026 · AWS Prompt the Planet Challenge.
 
 **Built on top of [Kajota](https://kajota.io)** — a production-grade social-commerce marketplace already live on the App Store and Google Play. Kajota Coach is an extension that addresses the dominant onboarding friction for African micro-sellers: typing out long product listings.
 
@@ -104,8 +104,8 @@ The Coach API endpoint is **auth-required** server-side, so the app starts with 
 
 ## Roadmap
 
-- **Kajota Agent (v2)** — multi-turn agentic version with tool-use, memory, and x402 micropayments for autonomous decisioning. Will be submitted to AlgoBharat + MunichTech AI Agents track.
-- **Kajota Mesh** — a Web3 sibling: on-chain co-sell commission split via Chainlink + Base, for AWS Activate Web3 + Ethereum Mexico submissions.
+- **Kajota Agent (v2)** — multi-turn agentic version with tool-use, memory, and x402 micropayments for autonomous decisioning. Targets **Google Cloud Rapid Agent Hackathon** ($60K cash, Jun 11) + **Mantle Turing Test Phase 2** ($100K, Jun 15) + **AlgoBharat Regional**.
+- **Kajota Mesh** — a Web3 sibling: on-chain co-sell commission split via Chainlink + Base. Combined Mantle Turing Test entry covers it (AI agents + on-chain financial decisions), plus AWS Activate Web3.
 
 ## License
 
