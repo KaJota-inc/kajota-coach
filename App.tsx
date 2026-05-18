@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/constants/colors';
 import { setAuthToken } from '@/services/api';
 import { loadStoredAuth, signOut as signOutService } from '@/services/auth';
+import CoachAgentChatScreen from '@/screens/CoachAgentChatScreen';
 import CoachCaptureScreen from '@/screens/CoachCaptureScreen';
 import CoachReviewScreen from '@/screens/CoachReviewScreen';
 import HomeScreen from '@/screens/HomeScreen';
@@ -66,6 +67,11 @@ export default function App() {
           component={CoachReviewScreen}
           name="CoachReview"
           options={{ headerShown: true, title: 'Review draft', headerTintColor: colors.text }}
+        />
+        <Stack.Screen
+          component={CoachAgentChatScreen}
+          name="CoachAgentChat"
+          options={{ headerShown: true, title: 'Coach Agent', headerTintColor: colors.text }}
         />
       </Stack.Navigator>
     </NavigationContainer>

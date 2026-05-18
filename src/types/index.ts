@@ -73,4 +73,50 @@ export type RootStackParamList = {
     pipelineTrace: string[];
     imageUri: string;
   };
+  CoachAgentChat: undefined;
 };
+
+/* ------------------------------------------------------------------ */
+/*  Coach Agent v2 — multi-turn chat                                  */
+/*  Mirrors CoachAgentDto.java in kajota-mobile-backend.              */
+/* ------------------------------------------------------------------ */
+
+export interface CoachAgentToolInvocation {
+  name: string;
+  args: string;
+  result: string;
+  latencyMs: number;
+}
+
+export interface CoachAgentChatRequest {
+  sessionId?: string | null;
+  userMessage: string;
+  imageBase64?: string;
+  currency?: string;
+  locale?: 'en' | 'yo' | 'ig' | 'ha';
+}
+
+export interface CoachAgentChatResponse {
+  sessionId: string;
+  reply: string;
+  toolsCalled: CoachAgentToolInvocation[];
+  draft?: CoachDraft | null;
+  finished: boolean;
+}
+
+/** Local-only chat-bubble shape used by the mobile screen. */
+export interface CoachAgentLocalMessage {
+  id: string;
+  role: 'user' | 'agent';
+  text: string;
+  /** Local file URI for the image attached to a user turn, if any. */
+  imageUri?: string;
+  /** Tools the agent invoked while producing this reply (agent role only). */
+  toolsCalled?: CoachAgentToolInvocation[];
+  /** Epoch ms — for "sent at" displays. */
+  timestamp: number;
+  /** True while the agent's reply is being awaited from the backend. */
+  pending?: boolean;
+  /** Error message if this turn failed. */
+  error?: string;
+}

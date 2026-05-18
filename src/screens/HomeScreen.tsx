@@ -87,6 +87,15 @@ export default function HomeScreen({ navigation, user, onSignOut }: Props) {
               <Text style={styles.ctaText}>Try Kajota Coach</Text>
             </LinearGradient>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.ctaSecondary}
+            onPress={() => navigation.navigate('CoachAgentChat')}
+          >
+            <Feather color={colors.brand} name="message-square" size={16} />
+            <Text style={styles.ctaSecondaryText}>Chat with Coach Agent (v2 · beta)</Text>
+          </TouchableOpacity>
         </LinearGradient>
 
         {/* Pipeline explainer */}
@@ -169,6 +178,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   ctaText: { color: 'white', fontSize: fontSize.lg, fontWeight: '700' },
+
+  ctaSecondary: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: `${colors.brand}40`,
+    backgroundColor: `${colors.brand}08`,
+  },
+  ctaSecondaryText: { color: colors.brand, fontSize: fontSize.md, fontWeight: '700' },
 
   sectionTitle: {
     color: colors.text,
