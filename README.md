@@ -4,7 +4,7 @@
 
 **Hackathon submissions:** AI Agent Olympics 2026 (Milan AI Week, lablab.ai) · TechHub Africa Hackathon 2026 · AWS Prompt the Planet Challenge.
 
-**Built on top of [Kajota](https://kajota.io)** — a production-grade social-commerce marketplace already live on the App Store and Google Play. Kajota Coach is an extension that addresses the dominant onboarding friction for African micro-sellers: typing out long product listings.
+**Runs on the production [Kajota](https://kajota.io) backend** — the same Spring Boot service powering the Kajota mobile app, Atlas Search index, and product catalogue. Kajota Coach is an extension that addresses the dominant onboarding friction for African micro-sellers: typing out long product listings.
 
 ---
 
@@ -85,7 +85,7 @@ The Coach API endpoint is **auth-required** server-side, so the app starts with 
 
 ## Why this is hackathon-grade
 
-- **Real product, not a toy demo.** Kajota is on the App Store as v1.0 — the production catalogue is the dataset Coach draws from.
+- **Real backend, not a toy demo.** Coach talks to the live Kajota production backend — the same Spring Boot service, Atlas Search index, and product catalogue powering the Kajota mobile app.
 - **Composition over reinvention.** Coach reuses the existing `GeminiService` / `TextGenerationProvider` / `GoogleCloudVisionService` / `CategoryRepository` / `ProductRepository`. The hackathon contribution is the workflow that chains them, not new AI integration.
 - **Graceful degradation.** OpenAI → Gemini → template fallback. Coach works even when one provider is quota-locked.
 - **Cultural relevance.** Optional Yoruba / Igbo / Hausa translation; price anchored to local currency; tested in a Nigerian-first marketplace.
