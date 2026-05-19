@@ -34,8 +34,8 @@
     "scheme": "kajota-coach",
     "extra": {
       "kajotaApiBaseUrl": "https://kajota-mobile-backend-2.onrender.com/kajota-mobile-backend",
-      "privyAppId": "",
-      "privyClientId": "",
+      "privyAppId": "cmpcmvl8600130djsln5axc7f",
+      "privyClientId": "client-WY6ZXd7rLvFRRofNSFZvy6D8j3qeFdmKF7i8BvpEkF9yf",
       "cosellRegistryAddress": "",
       "baseSepoliaRpcUrl": "https://sepolia.base.org"
     }
