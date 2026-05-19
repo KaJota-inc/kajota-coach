@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { PrivyProvider } from '@privy-io/expo';
+import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/constants/colors';
@@ -14,6 +16,18 @@ import HomeScreen from '@/screens/HomeScreen';
 import MeshSignScreen from '@/screens/MeshSignScreen';
 import SignInScreen from '@/screens/SignInScreen';
 import type { AuthUser, RootStackParamList } from '@/types';
+
+/* ------------------------------------------------------------------ */
+/*  Privy config                                                       */
+/*  - appId comes from app.json `extra.privyAppId` (provision at        */
+/*    privy.io and paste in; empty string disables the embedded         */
+/*    wallet path so the rest of the app still works).                  */
+/* ------------------------------------------------------------------ */
+const privyConfig = Constants.expoConfig?.extra as
+  | { privyAppId?: string; privyClientId?: string }
+  | undefined;
+const PRIVY_APP_ID = privyConfig?.privyAppId ?? '';
+const PRIVY_CLIENT_ID = privyConfig?.privyClientId ?? '';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -47,7 +61,7 @@ export default function App() {
     );
   }
 
-  return (
+  const navStack = (
     <NavigationContainer>
       <Stack.Navigator
         initialRouteName={user ? 'Home' : 'SignIn'}
@@ -81,6 +95,19 @@ export default function App() {
         />
       </Stack.Navigator>
     </NavigationContainer>
+  );
+
+  // Wrap with PrivyProvider only when configured. If the appId is
+  // unset (e.g. a fresh clone without a privy.io dashboard yet) we
+  // skip the provider so the rest of the app still boots — the
+  // MeshSign screen handles the missing-provider case explicitly.
+  if (!PRIVY_APP_ID) {
+    return navStack;
+  }
+  return (
+    <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID || undefined}>
+      {navStack}
+    </PrivyProvider>
   );
 }
 
