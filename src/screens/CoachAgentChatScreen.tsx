@@ -41,6 +41,7 @@ import { colors, fontSize, radius, spacing } from '@/constants/colors';
 import type {
   CoachAgentLocalMessage,
   CoachAgentToolInvocation,
+  ProposeListingForPublishResult,
   RootStackParamList,
 } from '@/types';
 
@@ -154,9 +155,14 @@ export default function CoachAgentChatScreen({ navigation }: Props) {
       item.role === 'user' ? (
         <UserBubble message={item} />
       ) : (
-        <AgentBubble message={item} />
+        <AgentBubble
+          message={item}
+          onSignProposal={proposal =>
+            navigation.navigate('MeshSign', { proposal })
+          }
+        />
       ),
-    [],
+    [navigation],
   );
 
   return (
@@ -268,8 +274,19 @@ function UserBubble({ message }: { message: CoachAgentLocalMessage }) {
   );
 }
 
-function AgentBubble({ message }: { message: CoachAgentLocalMessage }) {
+function AgentBubble({
+  message,
+  onSignProposal,
+}: {
+  message: CoachAgentLocalMessage;
+  onSignProposal: (proposal: ProposeListingForPublishResult) => void;
+}) {
   const [traceOpen, setTraceOpen] = useState(false);
+
+  // Detect whether the agent fired proposeListingForPublish this turn —
+  // if so, parse its result JSON and surface a Mesh-sign CTA inline.
+  const meshProposal = extractMeshProposal(message);
+
   return (
     <View style={[styles.row, styles.rowAgent]}>
       <View style={styles.agentAvatar}>
@@ -285,6 +302,17 @@ function AgentBubble({ message }: { message: CoachAgentLocalMessage }) {
           <Text style={styles.errorText}>{message.error}</Text>
         ) : (
           <Text style={styles.bubbleAgentText}>{message.text}</Text>
+        )}
+
+        {meshProposal && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => onSignProposal(meshProposal)}
+            style={styles.meshCta}
+          >
+            <Feather color="white" name="link" size={14} />
+            <Text style={styles.meshCtaText}>Sign on Mesh →</Text>
+          </TouchableOpacity>
         )}
 
         {message.toolsCalled && message.toolsCalled.length > 0 && (
@@ -308,6 +336,35 @@ function AgentBubble({ message }: { message: CoachAgentLocalMessage }) {
       </View>
     </View>
   );
+}
+
+/**
+ * If the agent fired proposeListingForPublish this turn, return the
+ * parsed result so the chat can render a Sign-on-Mesh CTA. Returns
+ * null when there's no such tool call (most turns won't have one).
+ */
+function extractMeshProposal(
+  message: CoachAgentLocalMessage,
+): ProposeListingForPublishResult | null {
+  if (!message.toolsCalled || message.toolsCalled.length === 0) return null;
+  // Iterate in reverse — if the agent called the tool multiple times
+  // (e.g. recomputed after a parameter tweak), the latest is the one
+  // the user should sign.
+  for (let i = message.toolsCalled.length - 1; i >= 0; i--) {
+    const t = message.toolsCalled[i]!;
+    if (t.name !== 'proposeListingForPublish') continue;
+    try {
+      const parsed = JSON.parse(t.result) as Partial<ProposeListingForPublishResult>;
+      if (parsed.ok && parsed.listingId && parsed.contract && parsed.method) {
+        return parsed as ProposeListingForPublishResult;
+      }
+    } catch {
+      // Tool result may be truncated (>800 chars gets "…[truncated]"
+      // appended server-side) — skip silently and try the next.
+      continue;
+    }
+  }
+  return null;
 }
 
 function ToolRow({ tool }: { tool: CoachAgentToolInvocation }) {
@@ -405,6 +462,21 @@ const styles = StyleSheet.create({
   thinkingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   thinkingText: { color: colors.textGray, fontSize: fontSize.sm, fontStyle: 'italic' },
   errorText: { color: colors.warning, fontSize: fontSize.sm },
+
+  /* mesh cta */
+  meshCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.brand,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+  },
+  meshCtaText: { color: 'white', fontSize: fontSize.sm, fontWeight: '700' },
 
   /* tool trace */
   traceToggle: {

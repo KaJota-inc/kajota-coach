@@ -74,7 +74,34 @@ export type RootStackParamList = {
     imageUri: string;
   };
   CoachAgentChat: undefined;
+  MeshSign: {
+    /** Output of the agent's proposeListingForPublish tool. */
+    proposal: ProposeListingForPublishResult;
+  };
 };
+
+/* ------------------------------------------------------------------ */
+/*  Mesh — on-chain co-sell settlement (kajota-mesh repo)             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Shape of the JSON returned by the Coach Agent's
+ * `proposeListingForPublish` tool. Mirrors the backend's
+ * `CoachAgentService.toolProposeListingForPublish`.
+ */
+export interface ProposeListingForPublishResult {
+  ok: boolean;
+  listingId: string;
+  productId: string;
+  wholesalerAddress: string;
+  cosellerAddress: string;
+  commissionBps: number;
+  currency: string;
+  chain: string;
+  contract: string;
+  method: string;
+  nextStep: string;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Coach Agent v2 — multi-turn chat                                  */

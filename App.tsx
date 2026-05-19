@@ -11,6 +11,7 @@ import CoachAgentChatScreen from '@/screens/CoachAgentChatScreen';
 import CoachCaptureScreen from '@/screens/CoachCaptureScreen';
 import CoachReviewScreen from '@/screens/CoachReviewScreen';
 import HomeScreen from '@/screens/HomeScreen';
+import MeshSignScreen from '@/screens/MeshSignScreen';
 import SignInScreen from '@/screens/SignInScreen';
 import type { AuthUser, RootStackParamList } from '@/types';
 
@@ -72,6 +73,11 @@ export default function App() {
           component={CoachAgentChatScreen}
           name="CoachAgentChat"
           options={{ headerShown: true, title: 'Coach Agent', headerTintColor: colors.text }}
+        />
+        <Stack.Screen
+          component={MeshSignScreen}
+          name="MeshSign"
+          options={{ headerShown: true, title: 'Publish on Mesh', headerTintColor: colors.text }}
         />
       </Stack.Navigator>
     </NavigationContainer>
