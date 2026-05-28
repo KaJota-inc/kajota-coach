@@ -5,15 +5,15 @@
  * during a chat turn. Shows the structured intent (productId, wholesaler,
  * coseller, commissionBps, currency, deterministic listingId) and lets
  * the seller commit the on-chain `CosellRegistry.register(...)` tx via
- * a Privy embedded wallet (email-OTP login → Base Sepolia signer).
+ * a Privy embedded wallet (email-OTP login → Ethereum Sepolia signer).
  *
  * Run-time prerequisites (each empty value just makes the relevant
  * action surface a "configure ___" message rather than crashing):
  *   - `app.json` extra.privyAppId      → privy.io dashboard app id
  *   - `app.json` extra.cosellRegistryAddress → 0x… address from
- *     `pnpm deploy:base-sepolia` in the kajota-mesh repo
+ *     `pnpm deploy:sepolia` in the kajota-mesh repo
  *
- * Transaction shape (Base Sepolia, chainId 84532):
+ * Transaction shape (Ethereum Sepolia, chainId 11155111):
  *   to:    cosellRegistryAddress
  *   data:  encodeFunctionData({ abi: REGISTRY_ABI,
  *                                functionName: 'register',
@@ -50,8 +50,14 @@ import type { RootStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MeshSign'>;
 
-const BASESCAN_BASE = 'https://sepolia.basescan.org';
-const BASE_SEPOLIA_CHAIN_ID = 84532;
+// Mesh deployed to Ethereum Sepolia (chainId 11155111). The Google
+// Cloud Web3 faucet drips here by default and Chainlink Functions is
+// supported, so the full register → escrow → release flow works the
+// same as it would on Base Sepolia.
+const EXPLORER_BASE = 'https://sepolia.etherscan.io';
+const MESH_CHAIN_ID =
+  (Constants.expoConfig?.extra as { meshChainId?: number } | undefined)
+    ?.meshChainId ?? 11155111;
 
 /** Subset of CosellRegistry's ABI — just the function we call here. */
 const REGISTRY_ABI = [
@@ -160,7 +166,7 @@ function PrivyMeshSign({
     if (!REGISTRY_ADDRESS) {
       Alert.alert(
         'CosellRegistry not deployed',
-        'Set `extra.cosellRegistryAddress` in app.json after running `pnpm deploy:base-sepolia` in the kajota-mesh repo.',
+        'Set `extra.cosellRegistryAddress` in app.json after running `pnpm deploy:sepolia` in the kajota-mesh repo.',
       );
       return;
     }
@@ -171,7 +177,7 @@ function PrivyMeshSign({
     setSubmitting(true);
     try {
       // Privy returns a provider that exposes EIP-1193 request(). Sending
-      // a tx on Base Sepolia is `eth_sendTransaction` with chainId in hex.
+      // a tx on Ethereum Sepolia is `eth_sendTransaction` with chainId in hex.
       const provider = await wallet.getProvider();
       const hash = (await provider.request({
         method: 'eth_sendTransaction',
@@ -180,7 +186,7 @@ function PrivyMeshSign({
             from: wallet.address,
             to: REGISTRY_ADDRESS,
             data: calldata,
-            chainId: toHex(BASE_SEPOLIA_CHAIN_ID),
+            chainId: toHex(MESH_CHAIN_ID),
             value: '0x0',
           },
         ],
@@ -193,8 +199,8 @@ function PrivyMeshSign({
     }
   };
 
-  const openBasescan = (path: string) => {
-    void Linking.openURL(`${BASESCAN_BASE}/${path}`);
+  const openExplorer = (path: string) => {
+    void Linking.openURL(`${EXPLORER_BASE}/${path}`);
   };
 
   return (
@@ -279,8 +285,8 @@ function PrivyMeshSign({
               <Text style={styles.successSub} numberOfLines={1}>
                 {txHash}
               </Text>
-              <TouchableOpacity onPress={() => openBasescan(`tx/${txHash}`)}>
-                <Text style={styles.basescanLinkText}>View on Basescan →</Text>
+              <TouchableOpacity onPress={() => openExplorer(`tx/${txHash}`)}>
+                <Text style={styles.basescanLinkText}>View on Etherscan →</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -305,7 +311,7 @@ function PrivyMeshSign({
             >
               <Feather color="white" name="check-circle" size={18} />
               <Text style={styles.ctaText}>
-                {submitting ? 'Signing…' : 'Sign on Base Sepolia'}
+                {submitting ? 'Signing…' : 'Sign on Ethereum Sepolia'}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -367,7 +373,7 @@ function UnconfiguredFallback({
             style={styles.ctaInner}
           >
             <Feather color="white" name="check-circle" size={18} />
-            <Text style={styles.ctaText}>Sign on Base Sepolia (disabled)</Text>
+            <Text style={styles.ctaText}>Sign on Ethereum Sepolia (disabled)</Text>
           </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
@@ -397,7 +403,7 @@ function HeroCard({ proposal }: { proposal: Props['route']['params']['proposal']
           </View>
           <Text style={styles.brandText}>Mesh · on-chain</Text>
         </View>
-        <Text style={styles.heroTitle}>Publish this listing on Base Sepolia</Text>
+        <Text style={styles.heroTitle}>Publish this listing on Ethereum Sepolia</Text>
         <Text style={styles.heroSub}>{proposal.nextStep}</Text>
       </LinearGradient>
       <FieldCard label="Listing ID (Keccak-256)" value={proposal.listingId} mono />

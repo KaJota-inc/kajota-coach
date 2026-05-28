@@ -36,8 +36,10 @@
       "kajotaApiBaseUrl": "https://kajota-mobile-backend-2.onrender.com/kajota-mobile-backend",
       "privyAppId": "cmpcmvl8600130djsln5axc7f",
       "privyClientId": "client-WY6ZXd7rLvFRRofNSFZvy6D8j3qeFdmKF7i8BvpEkF9yf",
-      "cosellRegistryAddress": "",
-      "baseSepoliaRpcUrl": "https://sepolia.base.org"
+      "cosellRegistryAddress": "0xfce6bd68d8d6f858d447f537d206c1e354b44315",
+      "cosellEscrowAddress": "0x599869cef2e4c52e2c9074caaf8f9fb0cb191776",
+      "meshChainId": 11155111,
+      "meshRpcUrl": "https://ethereum-sepolia-rpc.publicnode.com"
     }
   }
 }
