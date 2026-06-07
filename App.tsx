@@ -1,3 +1,16 @@
+// Polyfills — MUST be the first imports in this file, before anything
+// that touches global Web APIs gets evaluated. React Native's Hermes
+// runtime is intentionally minimal; viem + Privy assume Web globals.
+//   1. crypto.getRandomValues — used by viem's keyToAccount + Privy's
+//      embedded-wallet entropy.
+//   2. TextEncoder / TextDecoder — used by viem's hashing helpers and
+//      Privy's webcrypto wrapper.
+//   3. URL / URLSearchParams — used by every HTTP client in the stack
+//      that takes a URL and reads .pathname etc.
+import 'react-native-get-random-values';
+import 'text-encoding-polyfill';
+import 'react-native-url-polyfill/auto';
+
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
