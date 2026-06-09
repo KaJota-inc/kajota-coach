@@ -41,6 +41,14 @@ services:
       # below is the standard env var the Google SDK reads.
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/gcp-service-account.json
+      # Force google-genai (and therefore ADK) into Vertex AI mode
+      # rather than the public Gemini API. agent.py also setdefaults
+      # these, but pinning them in render.yaml makes the deploy spec
+      # self-describing for anyone reading it.
+      - key: GOOGLE_GENAI_USE_VERTEXAI
+        value: "true"
+      - key: GOOGLE_CLOUD_LOCATION
+        value: us-central1
 
       # ---- MongoDB (the partner MCP integration) ------------------
       - key: PARTNER

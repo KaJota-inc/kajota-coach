@@ -22,14 +22,30 @@ import os
 from typing import Final
 
 from dotenv import load_dotenv
-from google.adk.agents import Agent
-from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams
-from mcp import StdioServerParameters
 
 # Load .env.rapid-agent if present; falls back to the process env.
 # Render injects its env group directly; this is for local dev.
+# Must happen BEFORE any google.* import — those probe the env at
+# module-load to pick between Vertex AI and the public Gemini API.
 load_dotenv(".env.rapid-agent")
 load_dotenv(".env")
+
+# Force google-genai (and therefore ADK) to use Vertex AI rather than
+# the public Gemini API. Without these three the ADK looks for a
+# GEMINI_API_KEY and raises ValueError when it doesn't find one.
+# We map our shorter GCP_PROJECT_ID / GCP_REGION names onto the
+# canonical Google ones so callers only need to set the short ones.
+os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "true")
+if "GOOGLE_CLOUD_PROJECT" not in os.environ:
+    project = os.environ.get("GCP_PROJECT_ID", "")
+    if project:
+        os.environ["GOOGLE_CLOUD_PROJECT"] = project
+if "GOOGLE_CLOUD_LOCATION" not in os.environ:
+    os.environ["GOOGLE_CLOUD_LOCATION"] = os.environ.get("GCP_REGION", "us-central1")
+
+from google.adk.agents import Agent  # noqa: E402  imported after env set
+from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams  # noqa: E402
+from mcp import StdioServerParameters  # noqa: E402
 
 # ---- Model selection ----------------------------------------------
 
