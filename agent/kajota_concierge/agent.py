@@ -43,6 +43,22 @@ if "GOOGLE_CLOUD_PROJECT" not in os.environ:
 if "GOOGLE_CLOUD_LOCATION" not in os.environ:
     os.environ["GOOGLE_CLOUD_LOCATION"] = os.environ.get("GCP_REGION", "us-central1")
 
+# Env-var fallback for the GCP credentials. The clean path is to mount
+# the service-account JSON as a file (Render Secret File at
+# /etc/secrets/gcp-service-account.json, or local file pointed at by
+# GOOGLE_APPLICATION_CREDENTIALS). If that's wedged on the deploy
+# platform, set GCP_SERVICE_ACCOUNT_JSON to the raw JSON contents and
+# we'll persist it to /tmp at startup and re-point ADC at it. Either
+# path works; env var takes priority because it's the explicit override.
+_sa_json_inline = os.environ.get("GCP_SERVICE_ACCOUNT_JSON", "").strip()
+if _sa_json_inline:
+    import tempfile
+
+    _sa_path = os.path.join(tempfile.gettempdir(), "kajota-gcp-sa.json")
+    with open(_sa_path, "w", encoding="utf-8") as _f:
+        _f.write(_sa_json_inline)
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = _sa_path
+
 from google.adk.agents import Agent  # noqa: E402  imported after env set
 from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams  # noqa: E402
 from mcp import StdioServerParameters  # noqa: E402
