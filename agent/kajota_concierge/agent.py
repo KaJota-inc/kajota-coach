@@ -65,10 +65,13 @@ from mcp import StdioServerParameters  # noqa: E402
 
 # ---- Model selection ----------------------------------------------
 
-# The Rapid Agent track prompt requires Gemini 3 Pro by name. Don't
-# downgrade to flash without re-reading the rules — flash isn't an
-# accepted submission.
-GEMINI_MODEL: Final[str] = os.environ.get("GEMINI_MODEL", "gemini-3-pro")
+# The Rapid Agent track prompt requires Gemini 3 Pro. Default is the
+# current Vertex AI publisher id: gemini-3.1-pro-preview. The older
+# gemini-3-pro (preview) id was discontinued by Google on Mar 26, 2026
+# and now returns 404 NOT_FOUND. gemini-3.1-pro is the same generation,
+# just a versioned name — on-spec for the hackathon. Flash variants
+# are accepted as fallbacks but not first-choice.
+GEMINI_MODEL: Final[str] = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
 
 # ---- MongoDB MCP toolset ------------------------------------------
 
