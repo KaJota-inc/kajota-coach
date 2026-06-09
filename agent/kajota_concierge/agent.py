@@ -41,7 +41,12 @@ if "GOOGLE_CLOUD_PROJECT" not in os.environ:
     if project:
         os.environ["GOOGLE_CLOUD_PROJECT"] = project
 if "GOOGLE_CLOUD_LOCATION" not in os.environ:
-    os.environ["GOOGLE_CLOUD_LOCATION"] = os.environ.get("GCP_REGION", "us-central1")
+    # Default to `global` — Gemini 3 preview models (gemini-3.1-pro-preview
+    # in particular) ONLY publish to the global endpoint, not regional ones
+    # like us-central1. GA models like gemini-2.5-pro also accept global,
+    # so this is forward-compatible. Override via GCP_REGION if a specific
+    # region is needed for a future model.
+    os.environ["GOOGLE_CLOUD_LOCATION"] = os.environ.get("GCP_REGION", "global")
 
 # Env-var fallback for the GCP credentials. The clean path is to mount
 # the service-account JSON as a file (Render Secret File at

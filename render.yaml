@@ -30,13 +30,13 @@ services:
         value: "8080"
 
       # ---- Gemini / Vertex AI -------------------------------------
-      # Pivoted to gemini-2.5-pro (GA) — the Gemini 3 preview models
-      # weren't accessible on this hackathon GCP project in time:
-      #   - gemini-3-pro: discontinued Mar 26, 2026
-      #   - gemini-3.1-pro-preview: requires Model Garden allowlist
-      # Override via the dashboard if/when Gemini 3 access lands.
+      # Try gemini-3.1-pro-preview first (the only currently-shipping
+      # Gemini 3 text model). Preview models publish only to the
+      # `global` location and may still require allowlist — if it
+      # 404s the dashboard env-var override should be flipped to
+      # gemini-2.5-pro (GA, works without gating).
       - key: GEMINI_MODEL
-        value: gemini-2.5-pro
+        value: gemini-3.1-pro-preview
       - key: GCP_PROJECT_ID
         sync: false   # Render dashboard input
       - key: GCP_REGION
@@ -52,8 +52,11 @@ services:
       # self-describing for anyone reading it.
       - key: GOOGLE_GENAI_USE_VERTEXAI
         value: "true"
+      # Gemini 3 preview models only publish to the `global` endpoint.
+      # GA models like gemini-2.5-pro also accept global, so this is
+      # forward-compatible for either model id.
       - key: GOOGLE_CLOUD_LOCATION
-        value: us-central1
+        value: global
 
       # ---- MongoDB (the partner MCP integration) ------------------
       - key: PARTNER
