@@ -1,0 +1,53 @@
+# Render service config for the KaJota Concierge agent.
+#
+# One-click deploy from this branch (hackathon/rapid-agent):
+#   1. Connect this repo to your Render account
+#   2. Point at this render.yaml
+#   3. Set branch = hackathon/rapid-agent
+#   4. Provision the secrets below via the Render dashboard
+#      (sync: false fields below — Render won't accept JSON in
+#      env vars, so use Secret Files for the GCP credential)
+#
+# After the first successful boot, the service URL becomes the
+# COACH_AGENT_BASE the mobile coach hits.
+
+services:
+  - type: web
+    name: kajota-concierge-agent
+    runtime: docker
+    rootDir: agent
+    plan: free
+    branch: hackathon/rapid-agent
+    region: oregon
+
+    dockerfilePath: agent/Dockerfile
+    dockerContext: agent
+
+    healthCheckPath: /healthz
+
+    envVars:
+      - key: PORT
+        value: "8080"
+
+      # ---- Gemini / Vertex AI -------------------------------------
+      - key: GEMINI_MODEL
+        value: gemini-3-pro
+      - key: GCP_PROJECT_ID
+        sync: false   # Render dashboard input
+      - key: GCP_REGION
+        value: us-central1
+      # The service-account JSON is mounted as a Secret File at
+      # /etc/secrets/gcp-service-account.json by Render. The path
+      # below is the standard env var the Google SDK reads.
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/gcp-service-account.json
+
+      # ---- MongoDB (the partner MCP integration) ------------------
+      - key: PARTNER
+        value: mongodb
+      - key: MONGODB_URI
+        sync: false   # Render dashboard input (MongoDB Atlas SRV URI)
+
+      # ---- Optional ----------------------------------------------
+      - key: COACH_BACKEND_URL
+        sync: false   # The kajota-mobile-backend Render URL, if used
