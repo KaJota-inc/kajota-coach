@@ -30,11 +30,13 @@ services:
         value: "8080"
 
       # ---- Gemini / Vertex AI -------------------------------------
-      # gemini-3-pro was retired on Vertex AI on Mar 26, 2026 — the
-      # current publisher id is gemini-3.1-pro-preview. Same generation,
-      # on-spec for the Rapid Agent track (which requires Gemini 3).
+      # Pivoted to gemini-2.5-pro (GA) — the Gemini 3 preview models
+      # weren't accessible on this hackathon GCP project in time:
+      #   - gemini-3-pro: discontinued Mar 26, 2026
+      #   - gemini-3.1-pro-preview: requires Model Garden allowlist
+      # Override via the dashboard if/when Gemini 3 access lands.
       - key: GEMINI_MODEL
-        value: gemini-3.1-pro-preview
+        value: gemini-2.5-pro
       - key: GCP_PROJECT_ID
         sync: false   # Render dashboard input
       - key: GCP_REGION
