@@ -69,7 +69,7 @@ class ChatResponse(BaseModel):
 async def banner() -> dict[str, Any]:
     return {
         "service": APP_NAME,
-        "model": os.environ.get("GEMINI_MODEL", "gemini-3-pro"),
+        "model": os.environ.get("GEMINI_MODEL", "gemini-2.5-pro"),
         "partner": "mongodb",
         "docs": "/docs",
     }
