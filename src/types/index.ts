@@ -147,3 +147,37 @@ export interface CoachAgentLocalMessage {
   /** Error message if this turn failed. */
   error?: string;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Coach Agent v2 — voice mode (Tier 4)                              */
+/*  Mirrors CoachAgentVoiceDto.java in kajota-mobile-backend.         */
+/* ------------------------------------------------------------------ */
+
+/** BCP-47 codes the voice loop understands. */
+export type VoiceLanguage = 'yo-NG' | 'ig-NG' | 'ha-NG' | 'pcm-NG' | 'en-US';
+
+/** Frame type discriminator — must match Java's CoachAgentVoiceDto.Type. */
+export type VoiceFrameType =
+  | 'AUDIO_FRAME'
+  | 'LANGUAGE_HINT'
+  | 'END_OF_UTTERANCE'
+  | 'USER_TRANSCRIPT'
+  | 'AGENT_TEXT_DELTA'
+  | 'TOOL_INVOCATION'
+  | 'AUDIO_CHUNK'
+  | 'AGENT_TURN_DONE'
+  | 'ERROR';
+
+/** Single envelope shared in both directions over the voice WS. */
+export interface VoiceFrame {
+  type: VoiceFrameType;
+  sessionId?: string;
+  seq?: number;
+  /** Base64 PCM. 16kHz mono on the way up, 24kHz mono on the way down. */
+  audio?: string;
+  language?: VoiceLanguage;
+  text?: string;
+  toolName?: string;
+  finalChunk?: boolean;
+  timestamp?: number;
+}

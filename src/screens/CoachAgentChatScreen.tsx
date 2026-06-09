@@ -37,12 +37,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 
 import { sendAgentChat } from '@/services/coachAgent';
+import { getAuthToken } from '@/services/api';
+import { useVoiceSession } from '@/hooks/useVoiceSession';
+import VoiceMicButton from '@/components/VoiceMicButton';
 import { colors, fontSize, radius, spacing } from '@/constants/colors';
 import type {
   CoachAgentLocalMessage,
   CoachAgentToolInvocation,
   ProposeListingForPublishResult,
   RootStackParamList,
+  VoiceLanguage,
 } from '@/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CoachAgentChat'>;
@@ -148,6 +152,81 @@ export default function CoachAgentChatScreen({ navigation }: Props) {
     [input, pendingImage, sessionId, isAgentBusy],
   );
 
+  /* --- voice mode (Tier 4) --------------------------------------------- */
+
+  // Id of the agent bubble currently being streamed by the voice loop,
+  // so AGENT_TEXT_DELTA frames append to one bubble rather than spawning
+  // a new bubble per chunk.
+  const streamingAgentIdRef = useRef<string | null>(null);
+  const [voiceLanguage] = useState<VoiceLanguage>('yo-NG');
+
+  const voice = useVoiceSession({
+    bearerToken: getAuthToken() ?? '',
+    sessionId,
+    language: voiceLanguage,
+    onUserTranscript: text => {
+      const now = Date.now();
+      setMessages(prev => [
+        ...prev,
+        { id: `voice-user-${now}`, role: 'user', text, timestamp: now },
+      ]);
+      // Open a fresh agent bubble for the reply that's about to stream.
+      const agentId = `voice-agent-${now + 1}`;
+      streamingAgentIdRef.current = agentId;
+      setMessages(prev => [
+        ...prev,
+        { id: agentId, role: 'agent', text: '', timestamp: now + 1, pending: true },
+      ]);
+    },
+    onAgentTextDelta: (text, finalChunk) => {
+      const agentId = streamingAgentIdRef.current;
+      if (!agentId) return;
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === agentId
+            ? { ...m, pending: !finalChunk, text: m.text + text }
+            : m,
+        ),
+      );
+      if (finalChunk) streamingAgentIdRef.current = null;
+    },
+    onToolInvocation: toolName => {
+      const agentId = streamingAgentIdRef.current;
+      if (!agentId) return;
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === agentId
+            ? {
+                ...m,
+                toolsCalled: [
+                  ...(m.toolsCalled ?? []),
+                  { name: toolName, args: '', result: '', latencyMs: 0 },
+                ],
+              }
+            : m,
+        ),
+      );
+    },
+    onError: msg => {
+      const agentId = streamingAgentIdRef.current;
+      streamingAgentIdRef.current = null;
+      setMessages(prev =>
+        agentId
+          ? prev.map(m => (m.id === agentId ? { ...m, pending: false, error: msg } : m))
+          : [
+              ...prev,
+              {
+                id: `voice-err-${Date.now()}`,
+                role: 'agent',
+                text: '',
+                timestamp: Date.now(),
+                error: msg,
+              },
+            ],
+      );
+    },
+  });
+
   /* --- render ---------------------------------------------------------- */
 
   const renderMessage = useCallback(
@@ -215,6 +294,17 @@ export default function CoachAgentChatScreen({ navigation }: Props) {
           value={input}
           onChangeText={setInput}
         />
+        {/* Voice mode (Tier 4): show the mic when there's nothing typed.
+            Hold to talk in the seller's language. Hidden while a text
+            message is being composed so the send button takes priority. */}
+        {!isInputReady && (
+          <VoiceMicButton
+            state={voice.state}
+            disabled={isAgentBusy}
+            onPressIn={() => void voice.startListening()}
+            onPressOut={() => void voice.stopListening()}
+          />
+        )}
         <TouchableOpacity
           accessibilityLabel="Send"
           disabled={!isInputReady || isAgentBusy}

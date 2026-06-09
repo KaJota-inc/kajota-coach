@@ -24,6 +24,16 @@ export function setAuthToken(token: string | null) {
   bearerToken = token;
 }
 
+/**
+ * The current bearer token, or null if signed out. Needed by the voice
+ * WebSocket (Tier 4), which authenticates via an `Authorization` header
+ * on the upgrade request rather than going through the axios
+ * interceptor.
+ */
+export function getAuthToken(): string | null {
+  return bearerToken;
+}
+
 api.interceptors.request.use(config => {
   if (bearerToken) {
     config.headers.Authorization = `Bearer ${bearerToken}`;

@@ -17,7 +17,8 @@
       "bundleIdentifier": "io.kajota.coach",
       "infoPlist": {
         "NSCameraUsageDescription": "Kajota Coach needs the camera to capture product photos that the AI will turn into a listing draft.",
-        "NSPhotoLibraryUsageDescription": "Kajota Coach needs access to your photos so you can choose an existing product photo for the AI to draft from."
+        "NSPhotoLibraryUsageDescription": "Kajota Coach needs access to your photos so you can choose an existing product photo for the AI to draft from.",
+        "NSMicrophoneUsageDescription": "Kajota Coach needs the microphone so you can talk to the Coach Agent in your own language instead of typing."
       }
     },
     "android": {
@@ -26,7 +27,7 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#F15A32"
       },
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "RECORD_AUDIO"]
     },
     "web": {
       "bundler": "metro"
