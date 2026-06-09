@@ -117,6 +117,32 @@ function PrivyMeshSign({
   const wallet = wallets.wallets?.[0];
   const walletAddress = wallet?.address ?? null;
 
+  // Privy's embedded wallet isn't auto-created by the SDK in this
+  // build — the dashboard's "create on login" toggle is off (judges
+  // would need access to flip it). Trigger creation explicitly once
+  // the user is authenticated and we don't yet have a wallet. The
+  // ref guards against double-firing inside React 19's strict-mode
+  // double-invoke.
+  const creatingWalletRef = React.useRef(false);
+  useEffect(() => {
+    if (!isReady || !user) return;
+    if (wallets.wallets && wallets.wallets.length > 0) return;
+    if (creatingWalletRef.current) return;
+    if (typeof wallets.create !== 'function') return;
+    creatingWalletRef.current = true;
+    wallets
+      .create()
+      .catch(e =>
+        Alert.alert(
+          'Wallet creation failed',
+          'Privy could not provision an embedded wallet. ' + errMsg(e),
+        ),
+      )
+      .finally(() => {
+        creatingWalletRef.current = false;
+      });
+  }, [isReady, user, wallets]);
+
   const calldata = useMemo(() => {
     try {
       return encodeFunctionData({
@@ -179,6 +205,19 @@ function PrivyMeshSign({
       // Privy returns a provider that exposes EIP-1193 request(). Sending
       // a tx on Ethereum Sepolia is `eth_sendTransaction` with chainId in hex.
       const provider = await wallet.getProvider();
+
+      // Privy's provider submits a raw signed tx and won't auto-fill
+      // gasLimit, so omitting it leaves 0 in the RLP envelope and the
+      // node rejects with "intrinsic gas too low".
+      //
+      // We deliberately skip eth_estimateGas here: Privy's gateway has
+      // returned revert-path gas (~26k) from a stale simulation in
+      // testing, which then runs out of gas mid-execution. register()
+      // empirically lands around 130-160k (two array pushes, a struct
+      // write, and an event emit), so we pin a generous static cap
+      // that the user pays for only what they actually use.
+      const gasLimit = toHex(400_000);
+
       const hash = (await provider.request({
         method: 'eth_sendTransaction',
         params: [
@@ -188,6 +227,10 @@ function PrivyMeshSign({
             data: calldata,
             chainId: toHex(MESH_CHAIN_ID),
             value: '0x0',
+            // Privy's EIP-1193 wrapper recognises both `gas` and
+            // `gasLimit`; set both so we're resilient to either spelling.
+            gas: gasLimit,
+            gasLimit,
           },
         ],
       })) as string;
