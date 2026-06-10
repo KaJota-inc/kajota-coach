@@ -28,6 +28,14 @@ COPY kajota_concierge /app/kajota_concierge
 RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir -e .
 
+# Build-time sanity check that both MCP partner runtimes are reachable
+# from inside the image. We do these as actual subprocess calls so the
+# build fails loudly if either binary isn't on PATH — rather than
+# discovering it at first user request.
+RUN python -c "import mcp_server_fetch" \
+ && node --version > /dev/null \
+ && npx --version > /dev/null
+
 # ---- Render expects $PORT, defaults to 8080 -----------------------
 ENV PORT=8080
 EXPOSE 8080

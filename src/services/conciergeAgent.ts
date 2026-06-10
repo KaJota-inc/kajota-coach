@@ -46,6 +46,59 @@ export function warmupConciergeAgent(): void {
 }
 
 /**
+ * Agentic-initiative opener — calls `POST /proactive`, which fires a
+ * one-shot agent turn that picks its own tool sequence (recent
+ * purchases / wishlist / catalogue browse) and returns a personalised
+ * greeting + the standard `[CARDS]` payload.
+ *
+ * Called from `ConciergeScreen`'s mount effect when the screen has no
+ * messages yet. The reply is rendered as the first agent bubble so the
+ * user sees concrete recommendations before they've typed anything.
+ *
+ * Uses the same `ChatResponse` shape as `sendConciergeChat` so the
+ * caller can hand the result straight to the existing card-rendering
+ * path. Same 120s timeout for cold-start coverage.
+ */
+export async function sendProactiveOpener(
+  payload: Pick<ConciergeChatRequest, 'userId' | 'sessionId'> = {},
+): Promise<ConciergeChatResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000);
+
+  try {
+    const res = await fetch(`${CONCIERGE_AGENT_BASE_URL}/proactive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: payload.userId ?? 'demo-user-1',
+        sessionId: payload.sessionId ?? null,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(
+        `Concierge proactive error (${res.status}): ${text || res.statusText}`,
+      );
+    }
+
+    return (await res.json()) as ConciergeChatResponse;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(
+        'Concierge agent timed out generating its opener. Free-tier dyno is cold — try again in 10s.',
+      );
+    }
+    throw err instanceof Error
+      ? err
+      : new Error('Could not reach the Concierge agent.');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
  * Single chat turn. Server keeps an in-memory ADK session per
  * `(userId, sessionId)` pair — pass back the previous `sessionId` to
  * continue the conversation, or omit it to start a new one.

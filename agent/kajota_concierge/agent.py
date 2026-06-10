@@ -118,6 +118,45 @@ mongodb_mcp = McpToolset(
     ),
 )
 
+# ---- Fetch MCP toolset (second partner) --------------------------
+#
+# Anthropic's reference Fetch MCP server, launched as a Python module.
+# Exposes a single `fetch` tool that retrieves a URL and returns the
+# converted Markdown body (or raw, on request). No auth, no API key.
+#
+# The agent uses this when a shopping question can't be answered from
+# the merchant's own database — competitor prices, public product spec
+# pages, review summaries. Composing it with the MongoDB MCP under the
+# same ADK runner is the Rapid Agent submission's "MCP as architecture,
+# not checkbox" claim.
+#
+# Install: `pip install mcp-server-fetch` (pinned in pyproject.toml).
+fetch_mcp = McpToolset(
+    connection_params=StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command="python",
+            args=[
+                "-m",
+                "mcp_server_fetch",
+                # Identify ourselves so target servers don't see a bare
+                # `python-httpx` UA. Public web hosts are friendlier to
+                # named bots.
+                "--user-agent",
+                "KaJotaConciergeAgent/1.0 (hackathon; +https://github.com/KaJota-inc/kajota-coach)",
+                # Honour robots.txt — the agent shouldn't crawl past
+                # what humans can hit. Reasonable default; flip off for
+                # specific demos via env if needed.
+            ],
+            env={
+                "PATH": os.environ.get("PATH", ""),
+            },
+        ),
+        # Fetch is fast — most pages return in <2s — but the first
+        # module import is slow, so give the launcher 30s.
+        timeout=30,
+    ),
+)
+
 # ---- Agent definition --------------------------------------------
 
 root_agent = Agent(
@@ -178,6 +217,17 @@ root_agent = Agent(
         "9. Default user id is `demo-user-1`. If the caller passes a "
         "   different `userId`, use that.\n"
         "\n"
+        "PUBLIC WEB (via the second MCP partner — `fetch`):\n"
+        "- You also have a `fetch` tool from the official Anthropic Fetch "
+        "  MCP server. It retrieves a URL and returns its Markdown body.\n"
+        "- Use it ONLY when the question needs public-web context that "
+        "  isn't in MongoDB: competitor prices on retailer sites, official "
+        "  product spec pages, public review summaries. Do NOT use it for "
+        "  data the user has stored with KaJota (use MongoDB).\n"
+        "- Cite the URL you fetched in your reply so the user can verify.\n"
+        "- If a fetch fails (timeout, 4xx, 5xx), explain that briefly and "
+        "  fall back to whatever you can answer from MongoDB.\n"
+        "\n"
         "OUTPUT FORMAT (strictly enforced):\n"
         "- Use PLAIN TEXT only. No markdown. No `**bold**`, no `*` or "
         "  `-` bullets, no `#` headers, no backticks. Just sentences.\n"
@@ -199,5 +249,5 @@ root_agent = Agent(
         "  values). One card per item. Omit the block entirely on "
         "  non-product turns (greetings, clarifying questions, errors).\n"
     ),
-    tools=[mongodb_mcp],
+    tools=[mongodb_mcp, fetch_mcp],
 )

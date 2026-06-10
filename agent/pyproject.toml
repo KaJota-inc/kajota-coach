@@ -19,6 +19,12 @@ dependencies = [
     # MongoDB MCP server as a subprocess the agent talks to over stdio.
     "mcp>=1.0.0",
 
+    # Anthropic's reference Fetch MCP server — the agent's second MCP
+    # partner. Launched as a Python module (`python -m mcp_server_fetch`)
+    # by the agent at boot; gives the agent a `fetch` tool over public
+    # HTTP(S). No auth.
+    "mcp-server-fetch>=2024.11.0",
+
     # MongoDB driver — used by the seed script. The agent itself reaches
     # MongoDB via the MCP server, not directly.
     "pymongo>=4.10.0",

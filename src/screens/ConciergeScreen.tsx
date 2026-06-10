@@ -37,6 +37,7 @@ import {
   sendConciergeChat,
   eventsToToolTrace,
   extractCards,
+  sendProactiveOpener,
   warmupConciergeAgent,
 } from '@/services/conciergeAgent';
 import { colors, fontSize, radius, spacing } from '@/constants/colors';
@@ -74,12 +75,63 @@ export default function ConciergeScreen(_props: Props) {
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList<ConciergeLocalMessage>>(null);
 
-  // Spin Render's free-tier dyno up the moment the user opens the
-  // screen. The /healthz roundtrip kicks the container out of sleep
-  // so the first real chat turn doesn't pay the 60-80s cold-start
-  // tax. Fire-and-forget — the chat call surfaces any actual errors.
+  // Agentic-initiative mount: fire `/proactive` so the agent picks
+  // its own tool sequence (recent purchases, wishlist deltas, possible
+  // recommendations) and emits a personalised greeting + cards BEFORE
+  // the user has typed anything. While that's in flight we also kick
+  // `/healthz` to spin the Render dyno warm — if `/proactive` itself
+  // hits cold-start latency we surface a "Looking that up…" placeholder
+  // so the user knows the agent is working, not stuck.
   useEffect(() => {
     warmupConciergeAgent();
+
+    let cancelled = false;
+    const placeholderId = `agent-opener-${Date.now()}`;
+    setMessages([
+      {
+        id: placeholderId,
+        role: 'agent',
+        text: '',
+        timestamp: Date.now(),
+        pending: true,
+      },
+    ]);
+
+    sendProactiveOpener({})
+      .then(response => {
+        if (cancelled) return;
+        setSessionId(response.sessionId);
+        const tools = eventsToToolTrace(response.events);
+        const { text: cleanText, cards } = extractCards(response.response);
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === placeholderId
+              ? {
+                  ...m,
+                  pending: false,
+                  text: cleanText,
+                  cards: cards.length > 0 ? cards : undefined,
+                  toolsCalled: tools,
+                }
+              : m,
+          ),
+        );
+      })
+      .catch(err => {
+        // If the opener fails (cold start, timeout, agent error), drop
+        // the placeholder bubble entirely. The user falls back to the
+        // empty-state with starter chips — exactly what the screen
+        // looked like before /proactive existed. No error UI.
+        if (cancelled) return;
+        const message =
+          err instanceof Error ? err.message : 'opener failed';
+        console.warn('[concierge] proactive opener failed:', message);
+        setMessages(prev => prev.filter(m => m.id !== placeholderId));
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const reversedMessages = useMemo(() => [...messages].reverse(), [messages]);

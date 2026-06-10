@@ -57,6 +57,20 @@ class ChatRequest(BaseModel):
     sessionId: str | None = None
 
 
+class ProactiveRequest(BaseModel):
+    """Body for POST /proactive — the agentic-initiative endpoint.
+
+    The mobile UI calls this on ConciergeScreen mount with no user
+    message. The server fires a one-shot agent turn with a fixed
+    greeter prompt that instructs the agent to choose its own MongoDB
+    queries based on the user's state and produce a personalised
+    opening message + cards.
+    """
+
+    userId: str = "demo-user-1"
+    sessionId: str | None = None
+
+
 class ChatResponse(BaseModel):
     sessionId: str
     response: str
@@ -65,12 +79,31 @@ class ChatResponse(BaseModel):
     events: list[dict[str, Any]]
 
 
+# The system-instructed greeter prompt. Lives here (not in agent.py)
+# because it's not an agent identity rule, it's the prompt the
+# /proactive endpoint hands to the agent in lieu of a user message.
+# Designed to push the agent into multi-tool reasoning BEFORE the
+# user has typed anything — that's the "agentic initiative" claim
+# in the Devpost submission.
+_PROACTIVE_PROMPT = (
+    "Greet me by acknowledging you're my KaJota Concierge, then surface "
+    "what's most worth my attention right now. Use the MongoDB MCP tools "
+    "to look at: my most recent purchase (so you know what just landed), "
+    "my wishlist (any item where current price is meaningfully close to "
+    "or below target?), and the product catalogue (a single recommendation "
+    "matching my preferred category from purchase history). Be concise — "
+    "one or two sentences for the greeting plus the standard [CARDS] "
+    "block. Do NOT ask me what I want; act on what you can already see."
+)
+
+
 @app.get("/")
 async def banner() -> dict[str, Any]:
     return {
         "service": APP_NAME,
         "model": os.environ.get("GEMINI_MODEL", "gemini-2.5-pro"),
-        "partner": "mongodb",
+        "partners": ["mongodb", "fetch"],
+        "endpoints": ["/chat", "/proactive", "/healthz", "/docs"],
         "docs": "/docs",
     }
 
@@ -85,27 +118,39 @@ async def healthz() -> dict[str, Any]:
     return {"ok": True, "agent": root_agent.name}
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest) -> ChatResponse:
-    session_id = req.sessionId or str(uuid.uuid4())
+async def _run_agent_turn(
+    *,
+    user_id: str,
+    session_id: str | None,
+    message: str,
+) -> ChatResponse:
+    """Run one agent turn and return a `ChatResponse`.
+
+    Shared by `/chat` (reactive — `message` is the user's input) and
+    `/proactive` (agentic — `message` is the greeter prompt the
+    /proactive endpoint synthesises). Same session machinery, same
+    event drain, same response shape — so the mobile UI can render
+    either one identically.
+    """
+    session_id = session_id or str(uuid.uuid4())
 
     # Get-or-create the session. ADK's API: get_session raises on miss
     # in some versions; wrap to handle both.
     session = await _session_service.get_session(
         app_name=APP_NAME,
-        user_id=req.userId,
+        user_id=user_id,
         session_id=session_id,
     )
     if session is None:
         session = await _session_service.create_session(
             app_name=APP_NAME,
-            user_id=req.userId,
+            user_id=user_id,
             session_id=session_id,
         )
 
     content = gen_types.Content(
         role="user",
-        parts=[gen_types.Part(text=req.message)],
+        parts=[gen_types.Part(text=message)],
     )
 
     final_text = ""
@@ -114,7 +159,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
     # Drain the async event stream — the final-response event carries
     # the full reply text; intermediate events show tool calls.
     async for event in _runner.run_async(
-        user_id=req.userId,
+        user_id=user_id,
         session_id=session_id,
         new_message=content,
     ):
@@ -128,6 +173,30 @@ async def chat(req: ChatRequest) -> ChatResponse:
         sessionId=session_id,
         response=final_text or "(no response)",
         events=events,
+    )
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest) -> ChatResponse:
+    return await _run_agent_turn(
+        user_id=req.userId,
+        session_id=req.sessionId,
+        message=req.message,
+    )
+
+
+@app.post("/proactive", response_model=ChatResponse)
+async def proactive(req: ProactiveRequest) -> ChatResponse:
+    """Agentic-initiative endpoint — mobile calls this on screen mount.
+
+    The agent picks its own tool sequence (recent purchases, wishlist
+    deltas, catalogue browse) and emits a personalised greeting + the
+    standard `[CARDS]` payload. No user input required.
+    """
+    return await _run_agent_turn(
+        user_id=req.userId,
+        session_id=req.sessionId,
+        message=_PROACTIVE_PROMPT,
     )
 
 
