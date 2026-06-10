@@ -25,6 +25,7 @@ import { loadStoredAuth, signOut as signOutService } from '@/services/auth';
 import CoachAgentChatScreen from '@/screens/CoachAgentChatScreen';
 import CoachCaptureScreen from '@/screens/CoachCaptureScreen';
 import CoachReviewScreen from '@/screens/CoachReviewScreen';
+import ConciergeScreen from '@/screens/ConciergeScreen';
 import HomeScreen from '@/screens/HomeScreen';
 import MeshSignScreen from '@/screens/MeshSignScreen';
 import SignInScreen from '@/screens/SignInScreen';
@@ -100,6 +101,11 @@ export default function App() {
           component={CoachAgentChatScreen}
           name="CoachAgentChat"
           options={{ headerShown: true, title: 'Coach Agent', headerTintColor: colors.text }}
+        />
+        <Stack.Screen
+          component={ConciergeScreen}
+          name="Concierge"
+          options={{ headerShown: true, title: 'KaJota Concierge', headerTintColor: colors.text }}
         />
         <Stack.Screen
           component={MeshSignScreen}

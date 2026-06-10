@@ -74,6 +74,7 @@ export type RootStackParamList = {
     imageUri: string;
   };
   CoachAgentChat: undefined;
+  Concierge: undefined;
   MeshSign: {
     /** Output of the agent's proposeListingForPublish tool. */
     proposal: ProposeListingForPublishResult;
@@ -145,6 +146,59 @@ export interface CoachAgentLocalMessage {
   /** True while the agent's reply is being awaited from the backend. */
   pending?: boolean;
   /** Error message if this turn failed. */
+  error?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  KaJota Concierge — shopping agent (Rapid Agent hackathon)         */
+/*  Talks directly to the standalone agent service                    */
+/*  (kajota-concierge-agent on Render) rather than the Java backend.  */
+/*  Shape mirrors agent/kajota_concierge/server.py ChatResponse.      */
+/* ------------------------------------------------------------------ */
+
+/** One ADK event part — either text, a tool call, or a tool response. */
+export interface ConciergeEventPart {
+  text?: string;
+  tool_call?: { name: string; args: Record<string, unknown> };
+  tool_response?: { name: string; preview: string };
+}
+
+/** One ADK event row from the agent's run_async stream. */
+export interface ConciergeEvent {
+  author: string;
+  final: boolean;
+  parts: ConciergeEventPart[];
+}
+
+export interface ConciergeChatRequest {
+  message: string;
+  userId?: string;
+  sessionId?: string | null;
+}
+
+export interface ConciergeChatResponse {
+  sessionId: string;
+  response: string;
+  events: ConciergeEvent[];
+}
+
+/** Flattened tool invocation for inline rendering in the chat bubble. */
+export interface ConciergeToolInvocation {
+  name: string;
+  /** JSON-stringified args (e.g. `{"collection":"purchases","filter":...}`). */
+  args?: string;
+  /** Truncated preview of the MCP tool response. */
+  preview?: string;
+}
+
+/** Local-only chat-bubble shape used by ConciergeScreen. */
+export interface ConciergeLocalMessage {
+  id: string;
+  role: 'user' | 'agent';
+  text: string;
+  toolsCalled?: ConciergeToolInvocation[];
+  timestamp: number;
+  pending?: boolean;
   error?: string;
 }
 
