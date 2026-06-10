@@ -30,13 +30,12 @@ services:
         value: "8080"
 
       # ---- Gemini / Vertex AI -------------------------------------
-      # Try gemini-3.1-pro-preview first (the only currently-shipping
-      # Gemini 3 text model). Preview models publish only to the
-      # `global` location and may still require allowlist — if it
-      # 404s the dashboard env-var override should be flipped to
-      # gemini-2.5-pro (GA, works without gating).
+      # Active submission model: gemini-2.5-pro (GA, no allowlist).
+      # Allowlist request for gemini-3.1-pro-preview was posted on the
+      # Google AI Developers Forum on Jun 10, 2026 — flip the dashboard
+      # env-var override back to gemini-3.1-pro-preview if/when approved.
       - key: GEMINI_MODEL
-        value: gemini-3.1-pro-preview
+        value: gemini-2.5-pro
       - key: GCP_PROJECT_ID
         sync: false   # Render dashboard input
       - key: GCP_REGION
