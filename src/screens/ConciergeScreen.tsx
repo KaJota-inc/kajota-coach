@@ -16,7 +16,7 @@
  * The "Wishlist" quick-action sends a canned prompt rather than a
  * separate REST call so the demo stays purely agent-driven.
  */
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -33,10 +33,16 @@ import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 
-import { sendConciergeChat, eventsToToolTrace } from '@/services/conciergeAgent';
+import {
+  sendConciergeChat,
+  eventsToToolTrace,
+  extractCards,
+  warmupConciergeAgent,
+} from '@/services/conciergeAgent';
 import { colors, fontSize, radius, spacing } from '@/constants/colors';
 import type {
   ConciergeLocalMessage,
+  ConciergeProductCard,
   ConciergeToolInvocation,
   RootStackParamList,
 } from '@/types';
@@ -67,6 +73,14 @@ export default function ConciergeScreen(_props: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList<ConciergeLocalMessage>>(null);
+
+  // Spin Render's free-tier dyno up the moment the user opens the
+  // screen. The /healthz roundtrip kicks the container out of sleep
+  // so the first real chat turn doesn't pay the 60-80s cold-start
+  // tax. Fire-and-forget — the chat call surfaces any actual errors.
+  useEffect(() => {
+    warmupConciergeAgent();
+  }, []);
 
   const reversedMessages = useMemo(() => [...messages].reverse(), [messages]);
   const isInputReady = input.trim().length > 0;
@@ -101,13 +115,15 @@ export default function ConciergeScreen(_props: Props) {
         });
         setSessionId(response.sessionId);
         const tools = eventsToToolTrace(response.events);
+        const { text: cleanText, cards } = extractCards(response.response);
         setMessages(prev =>
           prev.map(m =>
             m.id === agentPlaceholder.id
               ? {
                   ...m,
                   pending: false,
-                  text: response.response,
+                  text: cleanText,
+                  cards: cards.length > 0 ? cards : undefined,
                   toolsCalled: tools,
                 }
               : m,
@@ -279,6 +295,14 @@ function AgentBubble({ message }: { message: ConciergeLocalMessage }) {
           <Text style={styles.bubbleAgentText}>{message.text}</Text>
         )}
 
+        {message.cards && message.cards.length > 0 && (
+          <View style={styles.cardsWrap}>
+            {message.cards.map((card, i) => (
+              <ProductCard key={`${card.title}-${i}`} card={card} />
+            ))}
+          </View>
+        )}
+
         {message.toolsCalled && message.toolsCalled.length > 0 && (
           <TouchableOpacity
             onPress={() => setTraceOpen(o => !o)}
@@ -299,6 +323,36 @@ function AgentBubble({ message }: { message: ConciergeLocalMessage }) {
           message.toolsCalled?.map((t, i) => (
             <ToolRow key={`${t.name}-${i}`} tool={t} />
           ))}
+      </View>
+    </View>
+  );
+}
+
+function ProductCard({ card }: { card: ConciergeProductCard }) {
+  return (
+    <View style={styles.productCard}>
+      <View style={styles.productCardThumb}>
+        <Feather color={colors.brand} name="shopping-bag" size={18} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text numberOfLines={1} style={styles.productCardTitle}>
+          {card.title}
+        </Text>
+        {card.subtitle ? (
+          <Text numberOfLines={1} style={styles.productCardSub}>
+            {card.subtitle}
+          </Text>
+        ) : null}
+        <View style={styles.productCardRow}>
+          {card.price ? (
+            <Text style={styles.productCardPrice}>{card.price}</Text>
+          ) : null}
+          {card.footer ? (
+            <Text numberOfLines={1} style={styles.productCardFooter}>
+              {card.footer}
+            </Text>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -464,6 +518,58 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   errorText: { color: colors.warning, fontSize: fontSize.sm },
+
+  /* product cards (parsed from [CARDS] block) */
+  cardsWrap: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  productCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  productCardThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: `${colors.brand}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productCardTitle: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  productCardSub: {
+    color: colors.textGray,
+    fontSize: fontSize.xs,
+    marginTop: 1,
+    textTransform: 'capitalize',
+  },
+  productCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 4,
+    flexWrap: 'wrap',
+  },
+  productCardPrice: {
+    color: colors.brand,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  productCardFooter: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    flexShrink: 1,
+  },
 
   /* tool trace */
   traceToggle: {

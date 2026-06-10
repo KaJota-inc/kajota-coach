@@ -191,12 +191,30 @@ export interface ConciergeToolInvocation {
   preview?: string;
 }
 
+/**
+ * Structured product/order/wishlist card the agent emits inside a
+ * trailing `[CARDS]...[/CARDS]` JSON block. Mirrors the format
+ * pinned in `agent/kajota_concierge/agent.py` system prompt.
+ */
+export interface ConciergeProductCard {
+  /** Item name (e.g. "Yeezy Boost 350 v2"). */
+  title: string;
+  /** Category, status, or short tag (e.g. "sneakers", "delivered"). */
+  subtitle: string;
+  /** Display price with currency (e.g. "39000 NGNT"). */
+  price: string;
+  /** Optional extra line — target price, ETA, restock note, etc. */
+  footer: string;
+}
+
 /** Local-only chat-bubble shape used by ConciergeScreen. */
 export interface ConciergeLocalMessage {
   id: string;
   role: 'user' | 'agent';
   text: string;
   toolsCalled?: ConciergeToolInvocation[];
+  /** Cards parsed out of the agent's trailing CARDS block. */
+  cards?: ConciergeProductCard[];
   timestamp: number;
   pending?: boolean;
   error?: string;

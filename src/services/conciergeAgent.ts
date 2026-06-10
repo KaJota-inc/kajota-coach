@@ -18,6 +18,7 @@ import type {
   ConciergeChatRequest,
   ConciergeChatResponse,
   ConciergeEvent,
+  ConciergeProductCard,
   ConciergeToolInvocation,
 } from '@/types';
 
@@ -29,6 +30,22 @@ export const CONCIERGE_AGENT_BASE_URL =
   fromConfig ?? 'https://kajota-concierge-agent.onrender.com';
 
 /**
+ * Fire-and-forget GET on `/healthz` to spin Render's free-tier dyno
+ * back up before the user fires their first chat turn. Resolves to
+ * void either way — the caller doesn't need to wait or handle errors,
+ * the warmup is opportunistic. Call this from ConciergeScreen's mount
+ * effect.
+ */
+export function warmupConciergeAgent(): void {
+  fetch(`${CONCIERGE_AGENT_BASE_URL}/healthz`, { method: 'GET' }).catch(
+    () => {
+      // Swallow — we don't surface warmup failures to the user; the
+      // real chat call will surface them with a useful error message.
+    },
+  );
+}
+
+/**
  * Single chat turn. Server keeps an in-memory ADK session per
  * `(userId, sessionId)` pair — pass back the previous `sessionId` to
  * continue the conversation, or omit it to start a new one.
@@ -38,10 +55,12 @@ export const CONCIERGE_AGENT_BASE_URL =
 export async function sendConciergeChat(
   payload: ConciergeChatRequest,
 ): Promise<ConciergeChatResponse> {
-  // The Render free tier cold-starts in ~10s and Gemini turns with
-  // MCP tool calls regularly run 15-25s. Give a generous timeout.
+  // 120s ceiling — Render's free-tier cold start can take 60-80s for
+  // a fresh dyno, and a first-turn Gemini + MongoDB MCP roundtrip
+  // adds another 20-40s on top. ConciergeScreen calls warmup() on
+  // mount to make this case rare in practice.
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 90_000);
+  const timeout = setTimeout(() => controller.abort(), 120_000);
 
   try {
     const res = await fetch(`${CONCIERGE_AGENT_BASE_URL}/chat`, {
@@ -66,7 +85,7 @@ export async function sendConciergeChat(
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error(
-        'Concierge agent timed out. Cold start can take ~15s — try again.',
+        'Concierge agent timed out. The free-tier dyno is cold — try again in 10s.',
       );
     }
     throw err instanceof Error
@@ -115,4 +134,49 @@ function safeStringify(value: unknown): string {
   } catch {
     return '';
   }
+}
+
+/**
+ * Strip a trailing `[CARDS] ... [/CARDS]` block off the agent's reply
+ * and parse its JSON payload into a list of structured product cards.
+ * The agent's system prompt instructs it to emit this block on any
+ * turn that references concrete products / orders / wishlist items
+ * (see `agent/kajota_concierge/agent.py`).
+ *
+ * Returns the cleaned text + parsed cards. If the block is missing or
+ * malformed, returns the original text + an empty array — the chat
+ * still renders, just without the card carousel.
+ */
+const CARDS_RE = /\[CARDS\]([\s\S]*?)\[\/CARDS\]/;
+
+export function extractCards(rawText: string): {
+  text: string;
+  cards: ConciergeProductCard[];
+} {
+  const match = rawText.match(CARDS_RE);
+  if (!match) return { text: rawText.trim(), cards: [] };
+
+  const cleanText = rawText.replace(CARDS_RE, '').trim();
+
+  try {
+    const parsed = JSON.parse(match[1]!.trim());
+    if (!Array.isArray(parsed)) return { text: cleanText, cards: [] };
+    const cards = parsed
+      .filter((c): c is Record<string, unknown> => typeof c === 'object' && c !== null)
+      .map((c): ConciergeProductCard => ({
+        title: stringField(c, 'title'),
+        subtitle: stringField(c, 'subtitle'),
+        price: stringField(c, 'price'),
+        footer: stringField(c, 'footer'),
+      }))
+      .filter(c => c.title.length > 0);
+    return { text: cleanText, cards };
+  } catch {
+    return { text: cleanText, cards: [] };
+  }
+}
+
+function stringField(obj: Record<string, unknown>, key: string): string {
+  const v = obj[key];
+  return typeof v === 'string' ? v : '';
 }
