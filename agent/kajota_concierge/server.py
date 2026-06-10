@@ -82,18 +82,43 @@ class ChatResponse(BaseModel):
 # The system-instructed greeter prompt. Lives here (not in agent.py)
 # because it's not an agent identity rule, it's the prompt the
 # /proactive endpoint hands to the agent in lieu of a user message.
-# Designed to push the agent into multi-tool reasoning BEFORE the
-# user has typed anything — that's the "agentic initiative" claim
-# in the Devpost submission.
+#
+# This is the "agentic initiative" claim in the Devpost submission, so
+# we have to force-multiply tool use. Gemini 2.5's default behaviour
+# when given an open-ended "greet me" prompt is to skip tools and
+# hallucinate plausible-sounding data — exactly what kills agent
+# demos. The fix below is explicitly directive: enumerate the three
+# tool calls the agent MUST issue before generating any text, and
+# remind it that every value in [CARDS] must come from those calls.
 _PROACTIVE_PROMPT = (
-    "Greet me by acknowledging you're my KaJota Concierge, then surface "
-    "what's most worth my attention right now. Use the MongoDB MCP tools "
-    "to look at: my most recent purchase (so you know what just landed), "
-    "my wishlist (any item where current price is meaningfully close to "
-    "or below target?), and the product catalogue (a single recommendation "
-    "matching my preferred category from purchase history). Be concise — "
-    "one or two sentences for the greeting plus the standard [CARDS] "
-    "block. Do NOT ask me what I want; act on what you can already see."
+    "BEFORE producing any text, you MUST call the MongoDB `find` tool "
+    "exactly three times, in this order:\n"
+    "  1. find on `purchases` with {\"userId\":\"demo-user-1\"}, "
+    "     sorted by `orderedAt: -1`, limit 1. This gives you the user's "
+    "     most recent order.\n"
+    "  2. find on `wishlist` with {\"userId\":\"demo-user-1\"}, no "
+    "     limit. This gives you all current wishlist items.\n"
+    "  3. find on `products`, limit 3, optionally filtered by the "
+    "     `category` of the order from step 1. This gives you a "
+    "     recommendation pool.\n"
+    "\n"
+    "After all three tool calls have returned, produce a 1-2 sentence "
+    "personalised greeting that references the ACTUAL data you found — "
+    "use real `itemName` / `name` values, real `pricePaidQuote` / "
+    "`priceQuote` / `currentPriceQuote` values, and the real "
+    "`quoteSymbol` (which is `NGNT` in this demo, never `USDC` or "
+    "`USD`).\n"
+    "\n"
+    "End with the standard [CARDS] block. Build the cards from the "
+    "documents you queried — one card for the recent order, one card "
+    "per wishlist item (cap at 2 so the card list stays scannable), "
+    "and one card for a single recommendation picked from the "
+    "products pool. Do NOT fabricate any item names, prices, order "
+    "ids, or categories — every value in [CARDS] must trace back to a "
+    "document returned by one of the three find calls above.\n"
+    "\n"
+    "Do NOT ask me what I want. Do NOT say you can't help. Just run "
+    "the three queries and report what you found."
 )
 
 
