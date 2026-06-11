@@ -151,9 +151,13 @@ fetch_mcp = McpToolset(
                 "PATH": os.environ.get("PATH", ""),
             },
         ),
-        # Fetch is fast — most pages return in <2s — but the first
-        # module import is slow, so give the launcher 30s.
-        timeout=30,
+        # Fetch is usually fast (<2s for small pages) but a real
+        # product / Wikipedia page through Render free-tier outbound
+        # can spend 20-40s on the HTTP roundtrip + markdown conversion.
+        # The MCP-roundtrip timeout has to cover the worst case, so
+        # 60s. Heavier than ideal for short pages but never the
+        # bottleneck — Gemini's own reasoning latency dwarfs this.
+        timeout=60,
     ),
 )
 
