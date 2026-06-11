@@ -366,8 +366,7 @@ function AgentBubble({ message }: { message: ConciergeLocalMessage }) {
               size={14}
             />
             <Text style={styles.traceToggleText}>
-              Used {message.toolsCalled.length} MongoDB MCP{' '}
-              {message.toolsCalled.length === 1 ? 'tool' : 'tools'}
+              {formatToolSummary(message.toolsCalled)}
             </Text>
           </TouchableOpacity>
         )}
@@ -378,6 +377,23 @@ function AgentBubble({ message }: { message: ConciergeLocalMessage }) {
       </View>
     </View>
   );
+}
+
+/**
+ * Build the "Used N tool calls (mongodb + fetch)" rollup label.
+ * Inspects the tool names so the chip says exactly which MCP partners
+ * the agent reached for this turn — the multi-MCP claim in
+ * SUBMISSION.md only lands if the user can SEE both partners surface.
+ */
+function formatToolSummary(tools: ConciergeToolInvocation[]): string {
+  const partners = new Set<string>();
+  for (const t of tools) {
+    if (t.name === 'fetch') partners.add('fetch');
+    else partners.add('mongodb');
+  }
+  const partnerList = Array.from(partners).join(' + ');
+  const noun = tools.length === 1 ? 'tool call' : 'tool calls';
+  return `Used ${tools.length} MCP ${noun} (${partnerList})`;
 }
 
 function ProductCard({ card }: { card: ConciergeProductCard }) {
