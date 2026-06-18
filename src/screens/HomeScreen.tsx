@@ -96,6 +96,17 @@ export default function HomeScreen({ navigation, user, onSignOut }: Props) {
             <Feather color={colors.brand} name="message-square" size={16} />
             <Text style={styles.ctaSecondaryText}>Chat with Coach Agent (v2 · beta)</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.ctaSecondary}
+            onPress={() => navigation.navigate('Concierge')}
+          >
+            <Feather color={colors.brand} name="shopping-bag" size={16} />
+            <Text style={styles.ctaSecondaryText}>
+              Try KaJota Concierge (Gemini · ADK · MongoDB MCP)
+            </Text>
+          </TouchableOpacity>
         </LinearGradient>
 
         {/* Pipeline explainer */}

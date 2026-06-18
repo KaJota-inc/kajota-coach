@@ -25,7 +25,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src --ext .ts,.tsx",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
@@ -36,6 +37,7 @@
     "expo": "~51.0.28",
     "expo-apple-authentication": "~6.4.2",
     "expo-application": "~5.9.1",
+    "expo-av": "~14.0.7",
     "expo-clipboard": "~6.0.3",
     "expo-crypto": "~13.0.2",
     "expo-dev-client": "~4.0.29",
@@ -64,6 +66,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~18.2.45",
+    "patch-package": "^8.0.1",
     "typescript": "~5.3.3"
   }
 }

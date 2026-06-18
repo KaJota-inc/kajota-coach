@@ -74,9 +74,13 @@ export type RootStackParamList = {
     imageUri: string;
   };
   CoachAgentChat: undefined;
+  Concierge: undefined;
   MeshSign: {
     /** Output of the agent's proposeListingForPublish tool. */
     proposal: ProposeListingForPublishResult;
+    /** Full agent decision trace for this run (every tool call across the
+     *  session) — recorded on-chain in the ERC-8004 benchmark. */
+    decisions?: { tool: string; ms: number }[];
   };
 };
 
@@ -146,4 +150,109 @@ export interface CoachAgentLocalMessage {
   pending?: boolean;
   /** Error message if this turn failed. */
   error?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  KaJota Concierge — shopping agent (Rapid Agent hackathon)         */
+/*  Talks directly to the standalone agent service                    */
+/*  (kajota-concierge-agent on Render) rather than the Java backend.  */
+/*  Shape mirrors agent/kajota_concierge/server.py ChatResponse.      */
+/* ------------------------------------------------------------------ */
+
+/** One ADK event part — either text, a tool call, or a tool response. */
+export interface ConciergeEventPart {
+  text?: string;
+  tool_call?: { name: string; args: Record<string, unknown> };
+  tool_response?: { name: string; preview: string };
+}
+
+/** One ADK event row from the agent's run_async stream. */
+export interface ConciergeEvent {
+  author: string;
+  final: boolean;
+  parts: ConciergeEventPart[];
+}
+
+export interface ConciergeChatRequest {
+  message: string;
+  userId?: string;
+  sessionId?: string | null;
+}
+
+export interface ConciergeChatResponse {
+  sessionId: string;
+  response: string;
+  events: ConciergeEvent[];
+}
+
+/** Flattened tool invocation for inline rendering in the chat bubble. */
+export interface ConciergeToolInvocation {
+  name: string;
+  /** JSON-stringified args (e.g. `{"collection":"purchases","filter":...}`). */
+  args?: string;
+  /** Truncated preview of the MCP tool response. */
+  preview?: string;
+}
+
+/**
+ * Structured product/order/wishlist card the agent emits inside a
+ * trailing `[CARDS]...[/CARDS]` JSON block. Mirrors the format
+ * pinned in `agent/kajota_concierge/agent.py` system prompt.
+ */
+export interface ConciergeProductCard {
+  /** Item name (e.g. "Yeezy Boost 350 v2"). */
+  title: string;
+  /** Category, status, or short tag (e.g. "sneakers", "delivered"). */
+  subtitle: string;
+  /** Display price with currency (e.g. "39000 NGNT"). */
+  price: string;
+  /** Optional extra line — target price, ETA, restock note, etc. */
+  footer: string;
+}
+
+/** Local-only chat-bubble shape used by ConciergeScreen. */
+export interface ConciergeLocalMessage {
+  id: string;
+  role: 'user' | 'agent';
+  text: string;
+  toolsCalled?: ConciergeToolInvocation[];
+  /** Cards parsed out of the agent's trailing CARDS block. */
+  cards?: ConciergeProductCard[];
+  timestamp: number;
+  pending?: boolean;
+  error?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Coach Agent v2 — voice mode (Tier 4)                              */
+/*  Mirrors CoachAgentVoiceDto.java in kajota-mobile-backend.         */
+/* ------------------------------------------------------------------ */
+
+/** BCP-47 codes the voice loop understands. */
+export type VoiceLanguage = 'yo-NG' | 'ig-NG' | 'ha-NG' | 'pcm-NG' | 'en-US';
+
+/** Frame type discriminator — must match Java's CoachAgentVoiceDto.Type. */
+export type VoiceFrameType =
+  | 'AUDIO_FRAME'
+  | 'LANGUAGE_HINT'
+  | 'END_OF_UTTERANCE'
+  | 'USER_TRANSCRIPT'
+  | 'AGENT_TEXT_DELTA'
+  | 'TOOL_INVOCATION'
+  | 'AUDIO_CHUNK'
+  | 'AGENT_TURN_DONE'
+  | 'ERROR';
+
+/** Single envelope shared in both directions over the voice WS. */
+export interface VoiceFrame {
+  type: VoiceFrameType;
+  sessionId?: string;
+  seq?: number;
+  /** Base64 PCM. 16kHz mono on the way up, 24kHz mono on the way down. */
+  audio?: string;
+  language?: VoiceLanguage;
+  text?: string;
+  toolName?: string;
+  finalChunk?: boolean;
+  timestamp?: number;
 }

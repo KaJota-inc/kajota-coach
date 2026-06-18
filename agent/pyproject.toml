@@ -1,0 +1,52 @@
+[project]
+name = "kajota-concierge-agent"
+version = "0.1.0"
+description = "KaJota Concierge — Rapid Agent hackathon submission (Gemini 3 + ADK + MongoDB MCP)"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Google Agent Development Kit — the agent runtime + MCP client.
+    # Pinned to >=1.2 because McpToolset + StdioConnectionParams stabilised
+    # in that release per the ADK release notes.
+    "google-adk>=1.2.0",
+
+    # Vertex AI client for Gemini 3 inference. ADK uses this under the hood
+    # when GEMINI_USE_VERTEXAI=true; listed explicitly so a fresh
+    # `pip install` doesn't surprise us.
+    "google-cloud-aiplatform>=1.65.0",
+
+    # MCP Python SDK — provides StdioServerParameters used to launch the
+    # MongoDB MCP server as a subprocess the agent talks to over stdio.
+    "mcp>=1.0.0",
+
+    # Anthropic's reference Fetch MCP server — the agent's second MCP
+    # partner. Launched as a Python module (`python -m mcp_server_fetch`)
+    # by the agent at boot; gives the agent a `fetch` tool over public
+    # HTTP(S). No auth.
+    "mcp-server-fetch>=2024.11.0",
+
+    # MongoDB driver — used by the seed script. The agent itself reaches
+    # MongoDB via the MCP server, not directly.
+    "pymongo>=4.10.0",
+
+    # FastAPI — wraps the agent as an HTTP server for the mobile coach
+    # to call. ADK also ships `adk web` for interactive dev; this is for
+    # the deployed Render service.
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+# `kajota-agent` runs the FastAPI server; `kajota-agent-seed` seeds the
+# demo MongoDB collections.
+kajota-agent = "kajota_concierge.server:main"
+kajota-agent-seed = "kajota_concierge.seed:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kajota_concierge*"]

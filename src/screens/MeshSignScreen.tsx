@@ -46,6 +46,11 @@ import { StatusBar } from 'expo-status-bar';
 import { encodeFunctionData, toHex } from 'viem';
 
 import { colors, fontSize, radius, spacing } from '@/constants/colors';
+import {
+  buildRecordRunTx,
+  explorerTxUrl,
+  MANTLE_CHAIN_ID,
+} from '@/services/agentIdentity';
 import type { RootStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MeshSign'>;
@@ -87,7 +92,11 @@ export default function MeshSignScreen({ route, navigation }: Props) {
   const privyConfigured = PRIVY_APP_ID !== '';
 
   return privyConfigured ? (
-    <PrivyMeshSign proposal={route.params.proposal} navigation={navigation} />
+    <PrivyMeshSign
+      proposal={route.params.proposal}
+      decisions={route.params.decisions}
+      navigation={navigation}
+    />
   ) : (
     <UnconfiguredFallback proposal={proposal} navigation={navigation} />
   );
@@ -99,9 +108,11 @@ export default function MeshSignScreen({ route, navigation }: Props) {
 
 function PrivyMeshSign({
   proposal,
+  decisions,
   navigation,
 }: {
   proposal: Props['route']['params']['proposal'];
+  decisions?: Props['route']['params']['decisions'];
   navigation: Props['navigation'];
 }) {
   const { user, isReady, logout } = usePrivy();
@@ -113,9 +124,39 @@ function PrivyMeshSign({
   const [stage, setStage] = useState<'idle' | 'email' | 'code'>('idle');
   const [submitting, setSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  // ERC-8004 benchmark write (Mantle) — records this agent run on the
+  // ReputationRegistry once the listing is published.
+  const [benchmarking, setBenchmarking] = useState(false);
+  const [benchmarkHash, setBenchmarkHash] = useState<string | null>(null);
 
   const wallet = wallets.wallets?.[0];
   const walletAddress = wallet?.address ?? null;
+
+  // Privy's embedded wallet isn't auto-created by the SDK in this
+  // build — the dashboard's "create on login" toggle is off (judges
+  // would need access to flip it). Trigger creation explicitly once
+  // the user is authenticated and we don't yet have a wallet. The
+  // ref guards against double-firing inside React 19's strict-mode
+  // double-invoke.
+  const creatingWalletRef = React.useRef(false);
+  useEffect(() => {
+    if (!isReady || !user) return;
+    if (wallets.wallets && wallets.wallets.length > 0) return;
+    if (creatingWalletRef.current) return;
+    if (typeof wallets.create !== 'function') return;
+    creatingWalletRef.current = true;
+    wallets
+      .create()
+      .catch(e =>
+        Alert.alert(
+          'Wallet creation failed',
+          'Privy could not provision an embedded wallet. ' + errMsg(e),
+        ),
+      )
+      .finally(() => {
+        creatingWalletRef.current = false;
+      });
+  }, [isReady, user, wallets]);
 
   const calldata = useMemo(() => {
     try {
@@ -179,6 +220,19 @@ function PrivyMeshSign({
       // Privy returns a provider that exposes EIP-1193 request(). Sending
       // a tx on Ethereum Sepolia is `eth_sendTransaction` with chainId in hex.
       const provider = await wallet.getProvider();
+
+      // Privy's provider submits a raw signed tx and won't auto-fill
+      // gasLimit, so omitting it leaves 0 in the RLP envelope and the
+      // node rejects with "intrinsic gas too low".
+      //
+      // We deliberately skip eth_estimateGas here: Privy's gateway has
+      // returned revert-path gas (~26k) from a stale simulation in
+      // testing, which then runs out of gas mid-execution. register()
+      // empirically lands around 130-160k (two array pushes, a struct
+      // write, and an event emit), so we pin a generous static cap
+      // that the user pays for only what they actually use.
+      const gasLimit = toHex(400_000);
+
       const hash = (await provider.request({
         method: 'eth_sendTransaction',
         params: [
@@ -188,6 +242,10 @@ function PrivyMeshSign({
             data: calldata,
             chainId: toHex(MESH_CHAIN_ID),
             value: '0x0',
+            // Privy's EIP-1193 wrapper recognises both `gas` and
+            // `gasLimit`; set both so we're resilient to either spelling.
+            gas: gasLimit,
+            gasLimit,
           },
         ],
       })) as string;
@@ -198,6 +256,70 @@ function PrivyMeshSign({
       setSubmitting(false);
     }
   };
+
+  // Record this agent run on the Mantle ERC-8004 ReputationRegistry —
+  // a permanent on-chain benchmark of the agent's performance (pillar 1).
+  // Signs with the same embedded wallet, on Mantle Sepolia (chainId 5003).
+  const handleBenchmark = async () => {
+    if (!wallet) {
+      Alert.alert('No embedded wallet yet', 'Sign in first to record this run on-chain.');
+      return;
+    }
+    const tx = buildRecordRunTx({
+      productId: proposal.productId,
+      tools: ['analyzeProductImage', 'anchorPrice', 'proposeListingForPublish'],
+      outcome: `listing published${txHash ? ` (${txHash})` : ''}`,
+      score: 100,
+      decisions: decisions ?? [],
+    });
+    if (!tx) {
+      Alert.alert(
+        'ReputationRegistry not configured',
+        'Set `extra.erc8004ReputationRegistry` in app.json.',
+      );
+      return;
+    }
+    setBenchmarking(true);
+    try {
+      const provider = await wallet.getProvider();
+      const gasLimit = toHex(500_000);
+      const hash = (await provider.request({
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: wallet.address,
+            to: tx.to,
+            data: tx.data,
+            chainId: toHex(MANTLE_CHAIN_ID),
+            value: '0x0',
+            gas: gasLimit,
+            gasLimit,
+          },
+        ],
+      })) as string;
+      setBenchmarkHash(hash);
+    } catch (e) {
+      Alert.alert(
+        'Benchmark failed',
+        'Could not record on Mantle. The embedded wallet needs a little MNT for gas on Mantle Sepolia. ' +
+          errMsg(e),
+      );
+    } finally {
+      setBenchmarking(false);
+    }
+  };
+
+  // Auto-record the benchmark the moment the listing is published — so EVERY
+  // run is recorded on-chain, no manual tap. Privy signs programmatically, so
+  // this needs no extra prompt. The ref guards against re-firing.
+  const benchmarkFiredRef = React.useRef(false);
+  useEffect(() => {
+    if (!txHash || benchmarkHash || benchmarking || !wallet) return;
+    if (benchmarkFiredRef.current) return;
+    benchmarkFiredRef.current = true;
+    void handleBenchmark();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txHash, wallet, benchmarkHash, benchmarking]);
 
   const openExplorer = (path: string) => {
     void Linking.openURL(`${EXPLORER_BASE}/${path}`);
@@ -291,6 +413,46 @@ function PrivyMeshSign({
             </View>
           </View>
         )}
+
+        {/* ---------- ERC-8004 benchmark step (pillar 1) ---------- */}
+        {txHash &&
+          (benchmarkHash ? (
+            <View style={styles.successBlock}>
+              <Feather color={colors.success} name="award" size={18} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.successTitle}>Run benchmarked on Mantle</Text>
+                <Text style={styles.successSub} numberOfLines={1}>
+                  {benchmarkHash}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => void Linking.openURL(explorerTxUrl(benchmarkHash))}
+                >
+                  <Text style={styles.basescanLinkText}>View on Mantle explorer →</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                disabled={benchmarking}
+                style={[styles.secondaryCta, benchmarking && { opacity: 0.5 }]}
+                onPress={handleBenchmark}
+              >
+                <Feather color={colors.brand} name="award" size={16} />
+                <Text style={styles.secondaryCtaText}>
+                  {benchmarking
+                    ? 'Recording on Mantle…'
+                    : 'Benchmark this run on Mantle (ERC-8004)'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.benchmarkHint}>
+                Recording this run — every tool the agent called — on the ERC-8004
+                ReputationRegistry on Mantle Sepolia: a permanent on-chain benchmark
+                of the agent's performance. Tap to retry if it doesn't auto-record.
+              </Text>
+            </>
+          ))}
 
         {/* ---------- sign cta ---------- */}
         {!txHash && (
@@ -574,6 +736,27 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: '600',
     marginTop: spacing.xs,
+  },
+
+  secondaryCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.brand,
+    backgroundColor: `${colors.brand}08`,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  secondaryCtaText: { color: colors.brand, fontSize: fontSize.md, fontWeight: '700' },
+  benchmarkHint: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    lineHeight: 16,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
 
   cta: { borderRadius: radius.pill, overflow: 'hidden', marginTop: spacing.md },
