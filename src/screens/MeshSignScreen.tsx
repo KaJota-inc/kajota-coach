@@ -92,7 +92,11 @@ export default function MeshSignScreen({ route, navigation }: Props) {
   const privyConfigured = PRIVY_APP_ID !== '';
 
   return privyConfigured ? (
-    <PrivyMeshSign proposal={route.params.proposal} navigation={navigation} />
+    <PrivyMeshSign
+      proposal={route.params.proposal}
+      decisions={route.params.decisions}
+      navigation={navigation}
+    />
   ) : (
     <UnconfiguredFallback proposal={proposal} navigation={navigation} />
   );
@@ -104,9 +108,11 @@ export default function MeshSignScreen({ route, navigation }: Props) {
 
 function PrivyMeshSign({
   proposal,
+  decisions,
   navigation,
 }: {
   proposal: Props['route']['params']['proposal'];
+  decisions?: Props['route']['params']['decisions'];
   navigation: Props['navigation'];
 }) {
   const { user, isReady, logout } = usePrivy();
@@ -264,6 +270,7 @@ function PrivyMeshSign({
       tools: ['analyzeProductImage', 'anchorPrice', 'proposeListingForPublish'],
       outcome: `listing published${txHash ? ` (${txHash})` : ''}`,
       score: 100,
+      decisions: decisions ?? [],
     });
     if (!tx) {
       Alert.alert(
@@ -301,6 +308,18 @@ function PrivyMeshSign({
       setBenchmarking(false);
     }
   };
+
+  // Auto-record the benchmark the moment the listing is published — so EVERY
+  // run is recorded on-chain, no manual tap. Privy signs programmatically, so
+  // this needs no extra prompt. The ref guards against re-firing.
+  const benchmarkFiredRef = React.useRef(false);
+  useEffect(() => {
+    if (!txHash || benchmarkHash || benchmarking || !wallet) return;
+    if (benchmarkFiredRef.current) return;
+    benchmarkFiredRef.current = true;
+    void handleBenchmark();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txHash, wallet, benchmarkHash, benchmarking]);
 
   const openExplorer = (path: string) => {
     void Linking.openURL(`${EXPLORER_BASE}/${path}`);
@@ -428,8 +447,9 @@ function PrivyMeshSign({
                 </Text>
               </TouchableOpacity>
               <Text style={styles.benchmarkHint}>
-                Records this agent run on the ERC-8004 ReputationRegistry on Mantle
-                Sepolia — a permanent on-chain benchmark of the agent's performance.
+                Recording this run — every tool the agent called — on the ERC-8004
+                ReputationRegistry on Mantle Sepolia: a permanent on-chain benchmark
+                of the agent's performance. Tap to retry if it doesn't auto-record.
               </Text>
             </>
           ))}

@@ -78,6 +78,9 @@ export type RootStackParamList = {
   MeshSign: {
     /** Output of the agent's proposeListingForPublish tool. */
     proposal: ProposeListingForPublishResult;
+    /** Full agent decision trace for this run (every tool call across the
+     *  session) — recorded on-chain in the ERC-8004 benchmark. */
+    decisions?: { tool: string; ms: number }[];
   };
 };
 

@@ -237,12 +237,18 @@ export default function CoachAgentChatScreen({ navigation }: Props) {
       ) : (
         <AgentBubble
           message={item}
-          onSignProposal={proposal =>
-            navigation.navigate('MeshSign', { proposal })
-          }
+          onSignProposal={proposal => {
+            // Aggregate every tool the agent called across the whole session
+            // so the on-chain benchmark records the full decision trace.
+            const decisions = messages
+              .filter(m => m.role === 'agent' && m.toolsCalled && m.toolsCalled.length > 0)
+              .flatMap(m => m.toolsCalled!)
+              .map(t => ({ tool: t.name, ms: t.latencyMs }));
+            navigation.navigate('MeshSign', { proposal, decisions });
+          }}
         />
       ),
-    [navigation],
+    [navigation, messages],
   );
 
   return (

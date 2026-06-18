@@ -188,6 +188,10 @@ export interface AgentRunReceipt {
   outcome: string;
   /** 0-100 quality score the user assigns to the run. */
   score?: number;
+  /** Full per-decision trace (every tool the agent called) for this run —
+   *  recorded on-chain so the benchmark captures every decision, not just
+   *  the outcome. */
+  decisions?: { tool: string; ms: number }[];
 }
 
 /**
@@ -201,12 +205,15 @@ export function buildRecordRunTx(run: AgentRunReceipt): {
   chainId: number;
 } | null {
   if (!REPUTATION_REGISTRY) return null;
+  const decisions = (run.decisions ?? []).slice(0, 24); // cap on-chain payload size
   const feedback = {
     type: 'kajota-coach-run-v1',
     agent: 'Kajota Coach Agent',
     productId: run.productId,
-    tools: run.tools,
     outcome: run.outcome,
+    // every agent decision (tool call) in this run, recorded on-chain
+    tools: decisions.length ? decisions.map((d) => d.tool) : run.tools,
+    decisions,
   };
   const feedbackURI =
     'data:application/json;base64,' + encodeBase64(JSON.stringify(feedback));
