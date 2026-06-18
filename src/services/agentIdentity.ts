@@ -28,12 +28,27 @@ type MantleExtra = {
 
 const extra = (Constants.expoConfig?.extra ?? {}) as MantleExtra;
 
-export const MANTLE_CHAIN_ID = extra.mantleChainId ?? 5003;
-export const MANTLE_RPC_URL = extra.mantleRpcUrl ?? 'https://rpc.sepolia.mantle.xyz';
-export const MANTLE_EXPLORER = extra.mantleExplorerUrl ?? 'https://explorer.sepolia.mantle.xyz';
-export const IDENTITY_REGISTRY = (extra.erc8004IdentityRegistry ?? '') as `0x${string}` | '';
-export const REPUTATION_REGISTRY = (extra.erc8004ReputationRegistry ?? '') as `0x${string}` | '';
-export const COACH_AGENT_ID = BigInt(extra.coachAgentId ?? 0);
+// Canonical ERC-8004 singletons on Mantle Sepolia (chainId 5003) and the
+// Coach Agent's minted identity. These are public, non-secret constants, so
+// they're hardcoded as defaults and only overridden if app.json provides
+// them (the Expo dev-client doesn't always deliver `extra`).
+const DEFAULTS = {
+  mantleChainId: 5003,
+  mantleRpcUrl: 'https://rpc.sepolia.mantle.xyz',
+  mantleExplorerUrl: 'https://explorer.sepolia.mantle.xyz',
+  erc8004IdentityRegistry: '0x8004A818BFB912233c491871b3d84c89A494BD9e',
+  erc8004ReputationRegistry: '0x8004B663056A597Dffe9eCcC1965A193B7388713',
+  coachAgentId: 303,
+} as const;
+
+export const MANTLE_CHAIN_ID = extra.mantleChainId ?? DEFAULTS.mantleChainId;
+export const MANTLE_RPC_URL = extra.mantleRpcUrl ?? DEFAULTS.mantleRpcUrl;
+export const MANTLE_EXPLORER = extra.mantleExplorerUrl ?? DEFAULTS.mantleExplorerUrl;
+export const IDENTITY_REGISTRY = (extra.erc8004IdentityRegistry ??
+  DEFAULTS.erc8004IdentityRegistry) as `0x${string}`;
+export const REPUTATION_REGISTRY = (extra.erc8004ReputationRegistry ??
+  DEFAULTS.erc8004ReputationRegistry) as `0x${string}`;
+export const COACH_AGENT_ID = BigInt(extra.coachAgentId ?? DEFAULTS.coachAgentId);
 
 const IDENTITY_ABI = [
   {
@@ -92,15 +107,26 @@ const client = createPublicClient({ transport: http(MANTLE_RPC_URL) });
 
 export interface AgentIdentity {
   agentId: number;
-  owner: `0x${string}`;
+  owner: `0x${string}` | null;
   name: string;
   registryAddress: string;
   explorerTokenUrl: string;
 }
 
-/** Read the agent's ERC-8004 identity + AgentCard name from Mantle. */
+/**
+ * The agent's ERC-8004 identity. The identity is known from config, so this
+ * always returns a card-ready value; it then enriches `owner`/`name` from a
+ * live Mantle read when the RPC is reachable (best-effort).
+ */
 export async function fetchAgentIdentity(): Promise<AgentIdentity | null> {
   if (!IDENTITY_REGISTRY || COACH_AGENT_ID === 0n) return null;
+  const base: AgentIdentity = {
+    agentId: Number(COACH_AGENT_ID),
+    owner: null,
+    name: 'Kajota Coach Agent',
+    registryAddress: IDENTITY_REGISTRY,
+    explorerTokenUrl: `${MANTLE_EXPLORER}/token/${IDENTITY_REGISTRY}?a=${COACH_AGENT_ID}`,
+  };
   try {
     const [owner, uri] = await Promise.all([
       client.readContract({
@@ -116,24 +142,19 @@ export async function fetchAgentIdentity(): Promise<AgentIdentity | null> {
         args: [COACH_AGENT_ID],
       }),
     ]);
-    let name = 'Kajota Coach Agent';
+    base.owner = owner as `0x${string}`;
     try {
       const json = uri.startsWith('data:')
         ? JSON.parse(decodeBase64(uri.slice(uri.indexOf(',') + 1)))
         : null;
-      if (json?.name) name = json.name;
+      if (json?.name) base.name = json.name;
     } catch {
       /* keep default name */
     }
-    return {
-      agentId: Number(COACH_AGENT_ID),
-      owner: owner as `0x${string}`,
-      name,
-      registryAddress: IDENTITY_REGISTRY,
-      explorerTokenUrl: `${MANTLE_EXPLORER}/token/${IDENTITY_REGISTRY}?a=${COACH_AGENT_ID}`,
-    };
+    return base;
   } catch {
-    return null;
+    // RPC unreachable — still show the identity card from known config.
+    return base;
   }
 }
 
