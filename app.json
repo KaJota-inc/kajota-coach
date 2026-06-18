@@ -40,7 +40,13 @@
       "cosellRegistryAddress": "0xfce6bd68d8d6f858d447f537d206c1e354b44315",
       "cosellEscrowAddress": "0x599869cef2e4c52e2c9074caaf8f9fb0cb191776",
       "meshChainId": 11155111,
-      "meshRpcUrl": "https://ethereum-sepolia-rpc.publicnode.com"
+      "meshRpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+      "mantleChainId": 5003,
+      "mantleRpcUrl": "https://rpc.sepolia.mantle.xyz",
+      "mantleExplorerUrl": "https://explorer.sepolia.mantle.xyz",
+      "erc8004IdentityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+      "erc8004ReputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+      "coachAgentId": 303
     }
   }
 }

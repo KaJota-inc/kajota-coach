@@ -18,6 +18,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PrivyProvider } from '@privy-io/expo';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
+import { mantleSepoliaTestnet, sepolia } from 'viem/chains';
 
 import { colors } from '@/constants/colors';
 import { setAuthToken } from '@/services/api';
@@ -124,7 +125,14 @@ export default function App() {
     return navStack;
   }
   return (
-    <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID || undefined}>
+    <PrivyProvider
+      appId={PRIVY_APP_ID}
+      clientId={PRIVY_CLIENT_ID || undefined}
+      // Declare both chains the embedded wallet signs on: Ethereum Sepolia
+      // (CosellRegistry.register listing) and Mantle Sepolia (ERC-8004
+      // ReputationRegistry.giveFeedback — the on-chain agent benchmark).
+      supportedChains={[sepolia, mantleSepoliaTestnet]}
+    >
       {navStack}
     </PrivyProvider>
   );
