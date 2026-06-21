@@ -72,6 +72,24 @@ MONGODB_URI=mongodb+srv://<user>:<pwd>@<cluster>.mongodb.net/
 
 # Partner pick (this build uses MongoDB)
 PARTNER=mongodb
+
+# OPTIONAL — Kajota Witness mirror.
+# When set, each completed turn is fire-and-forget POSTed to Witness
+# as an encrypted blob on 0G Storage (memory layer for Mesh disputes).
+# Leave unset to disable; Coach behaves identically either way.
+WITNESS_URL=http://localhost:4022
+WITNESS_SELLER_ID=kajota-concierge
+```
+
+To smoke-test the Witness wire without booting the whole agent
+(ADK + Vertex AI + MongoDB MCP), use the standalone smoke:
+
+```sh
+python3 -m venv .venv-smoke
+.venv-smoke/bin/pip install httpx
+WITNESS_URL=http://localhost:4022 \
+  .venv-smoke/bin/python scripts/witness_smoke.py
+# expect: a CID + storagescan URL printed
 ```
 
 ### 3. Seed the demo data
