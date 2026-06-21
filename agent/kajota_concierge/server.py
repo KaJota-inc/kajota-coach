@@ -29,6 +29,7 @@ from google.genai import types as gen_types
 from pydantic import BaseModel
 
 from kajota_concierge.agent import root_agent
+from kajota_concierge import witness_client
 
 APP_NAME = "kajota-concierge"
 
@@ -130,6 +131,7 @@ async def banner() -> dict[str, Any]:
         "partners": ["mongodb", "fetch"],
         "endpoints": ["/chat", "/proactive", "/healthz", "/docs"],
         "docs": "/docs",
+        "witnessMirror": witness_client.is_enabled(),
     }
 
 
@@ -193,6 +195,16 @@ async def _run_agent_turn(
             final_text = "".join(
                 p.text for p in event.content.parts if getattr(p, "text", None)
             )
+
+    # Mirror this turn to Kajota Witness (encrypted blob on 0G Storage)
+    # so it becomes recoverable as evidence in any future Mesh dispute.
+    # Fire-and-forget — never blocks the chat response. No-op if
+    # WITNESS_URL is unset.
+    witness_client.post_turn_background(
+        user_id=user_id,
+        message=message,
+        response=final_text,
+    )
 
     return ChatResponse(
         sessionId=session_id,
