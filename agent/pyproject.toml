@@ -35,6 +35,19 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "python-dotenv>=1.0.0",
+
+    # Async HTTP client for the Casper x402 paywall — server.py talks to the
+    # CSPR.cloud x402 Facilitator (/verify, /settle) over HTTPS. Usually
+    # already present transitively via google-adk, but pinned explicitly so
+    # the x402 integration never depends on a transitive accident.
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+# Test-only deps. `pip install -e ".[test]"` to run the x402 unit tests.
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
 ]
 
 [project.scripts]
@@ -42,6 +55,10 @@ dependencies = [
 # demo MongoDB collections.
 kajota-agent = "kajota_concierge.server:main"
 kajota-agent-seed = "kajota_concierge.seed:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -1,0 +1,159 @@
+# KaJota Coach × Casper — Agentic Buildathon 2026
+
+**Snap a deal, settle it on Casper.** KaJota Coach is an agentic shopping
+concierge (Gemini + Google ADK + MongoDB MCP). This branch makes it a
+**Casper-native economic actor**: it can *read* the Casper chain over MCP and
+*charge for its own premium work* with HTTP-native x402 micropayments settled
+on Casper.
+
+> Buildathon: [Casper Agentic Buildathon 2026](https://dorahacks.io/hackathon/casper-agentic-buildathon)
+> · $150K · submission deadline **Jul 1, 2026** · tracks: **Agentic AI**, **DeFi & Payments**.
+
+---
+
+## What we added (and why it's lean)
+
+The Coach already speaks **MCP** (MongoDB + Fetch) and is already a **FastAPI**
+service. Casper's AI Toolkit gives us two drop-in surfaces, so the whole
+integration is *additive* — no rewrite:
+
+| Track | Feature | Casper piece used | Where |
+|---|---|---|---|
+| **Agentic AI** | Agent reads on-chain state in natural language (balances, deploys, transfers, contracts) | [`casper-mcp`](https://github.com/msanlisavas/casper-mcp) as a 3rd `McpToolset` | `kajota_concierge/agent.py` |
+| **DeFi & Payments** | `POST /coach/premium` is pay-per-call, settled on Casper | [CSPR.cloud x402 Facilitator](https://docs.cspr.cloud/x402-facilitator-api/reference) (`/verify` + `/settle`) | `kajota_concierge/x402_casper.py` + `server.py` |
+
+Why we hand-rolled the x402 server side: the only official x402 **server** SDKs
+are Node (`@make-software/casper-x402`) and Go. The Coach is Python, and the
+facilitator is a plain HTTP service — so we speak that HTTP directly (`/verify`,
+`/settle`) rather than bolt on a Node sidecar. The implementation is a faithful
+port of the standard x402 envelope (`exact` scheme, `casper:*` CAIP-2 family).
+
+---
+
+## The x402 flow (HTTP 402, revived for agents)
+
+```
+Agent                         KaJota Coach (FastAPI)            CSPR.cloud Facilitator        Casper
+  │  POST /coach/premium  ───────▶  │                                  │                         │
+  │                                 │  no X-PAYMENT → 402 + price tag   │                         │
+  │  ◀── 402 { accepts:[ {scheme:"exact", network:"casper:casper-test", │                         │
+  │           maxAmountRequired, payTo, asset, ...} ] }                 │                         │
+  │                                 │                                  │                         │
+  │  sign EIP-712 transfer_with_authorization over the CEP-18 token    │                         │
+  │  POST /coach/premium  ─────────▶│                                  │                         │
+  │   X-PAYMENT: <base64 payload>   │  POST /verify {payload,reqs} ───▶│  sig + replay check     │
+  │                                 │  ◀── { isValid:true }            │                         │
+  │                                 │  POST /settle {payload,reqs} ───▶│  transfer_with_auth ───▶│  CEP-18
+  │                                 │  ◀── { success:true, transaction:<deploy hash> }           │
+  │                                 │  run premium agent turn          │                         │
+  │  ◀── 200 { response, settlement:{ transaction, payer, settled } }  │                         │
+  │       X-PAYMENT-RESPONSE: <base64 receipt>                          │                         │
+```
+
+The premium turn is a real ADK deep-dive (spend trend + wishlist price-drop
+opportunities + a grounded next-buy recommendation), so the micropayment buys
+genuine agent work — not a toy gate.
+
+---
+
+## Run the demo
+
+### 0. Get a sponsored CSPR.cloud key
+The buildathon issues a sponsored facilitator key (free on-chain tx). Drop it
+in `agent/.env.casper` (see `.env.casper.example`).
+
+### 1. Configure
+```sh
+cd agent
+cp .env.casper.example .env.casper
+# fill X402_PAY_TO, X402_ASSET, X402_FACILITATOR_API_KEY; set CASPER_MCP_ENABLED=1 for the MCP demo
+set -a; . .env.casper; set +a
+```
+
+### 2. Boot the agent
+```sh
+pip install -e .
+kajota-agent          # FastAPI on :8080
+```
+
+### 3. Hit the paywall (watch the 402 → pay → 200 dance)
+
+The unpaid probe needs no key — `scripts/x402_demo.py` does it for real and
+prints the decoded Casper price tag:
+
+```sh
+python scripts/x402_demo.py --url http://localhost:8080
+# → POST .../coach/premium  (no payment)
+# ← HTTP 402 Payment Required
+#     accepts[0]: scheme=exact  network=casper:casper-test  maxAmountRequired=1000
+#                 asset=<cep18>  payTo=<merchant>  resource=.../coach/premium
+#   …then prints the PaymentPayload skeleton a signer fills in.
+```
+
+Or with plain curl:
+```sh
+curl -i -X POST localhost:8080/coach/premium -H 'content-type: application/json' -d '{}'
+#   HTTP/1.1 402 Payment Required
+#   PAYMENT-REQUIRED: <base64 requirements>
+```
+
+To complete a paid call, a Casper signer produces the base64 `PaymentPayload`
+(EIP-712 `transfer_with_authorization` over the CEP-18 token — use the
+`make-software/casper-x402` JS/Go client, or CSPR.click in a browser), then:
+
+```sh
+python scripts/x402_demo.py --payment "<base64-signed-payload>"
+# ← HTTP 200 — paid. settlement: { "transaction":"<casper deploy hash>", "settled":true }
+#   X-PAYMENT-RESPONSE: <base64 receipt>
+```
+
+> The server side (this repo) — building the 402 price tag, then `/verify` +
+> `/settle` against the Casper facilitator — is what the buildathon scores for
+> the payments track. The signing half is the client's, and Casper ships
+> reference signers for it.
+
+### 4. Agent reads Casper over MCP
+With `CASPER_MCP_ENABLED=1` (Docker required):
+```sh
+curl -X POST localhost:8080/chat -H 'content-type: application/json' \
+  -d '{"message":"What is the CSPR balance of account <hash>, and did deploy <hash> settle?"}'
+# → the agent calls casper-mcp tools and reports real testnet state
+```
+
+---
+
+## Tests
+
+The paywall module is decoupled from the ADK agent, so it tests with a minimal
+env (no google-adk, no Mongo, no network — facilitator calls are mocked):
+
+```sh
+python3.11 -m venv .venv && . .venv/bin/activate
+pip install fastapi httpx pytest pytest-asyncio
+PYTHONPATH=. pytest tests/test_x402_casper.py -q   # 12 passed
+```
+
+Covers: 402 price-tag shape, header parsing (`X-PAYMENT` / `Payment-Signature`),
+base64 + raw payload decode, unconfigured fail-closed, verify-failure → 402,
+settle-failure → 402, and the happy verify→settle→receipt path.
+
+---
+
+## Files
+
+```
+agent/kajota_concierge/x402_casper.py   # x402 server protocol + facilitator client (new)
+agent/kajota_concierge/server.py        # POST /coach/premium + 402 handler (extended)
+agent/kajota_concierge/agent.py         # gated casper-mcp toolset + on-chain rules (extended)
+agent/kajota_concierge/__init__.py      # lazy root_agent so paywall imports light (changed)
+agent/tests/test_x402_casper.py         # 12 unit tests (new)
+agent/.env.casper.example               # Casper config template (new)
+```
+
+## Submission mapping
+
+- **Agentic AI** — the Coach autonomously discovers Casper capabilities via MCP
+  and reasons over real on-chain state; it acts, it doesn't just chat.
+- **DeFi & Payments** — agent-to-agent micropayments: the Coach charges for
+  premium work and settles a CEP-18 transfer on Casper per request, no account,
+  no API key, no human in the loop — the x402 thesis, in production shape.

@@ -63,6 +63,30 @@ services:
       - key: MONGODB_URI
         sync: false   # Render dashboard input (MongoDB Atlas SRV URI)
 
+      # ---- Casper x402 paywall (POST /coach/premium) --------------
+      # Premium agent turns settle a CEP-18 micropayment on Casper via
+      # the CSPR.cloud x402 Facilitator. All sync:false (dashboard /
+      # sponsored-key inputs). Until X402_PAY_TO + X402_ASSET +
+      # X402_FACILITATOR_API_KEY are set, /coach/premium returns 402 and
+      # explains it's unconfigured — the service still boots fine.
+      - key: X402_FACILITATOR_URL
+        value: https://x402-facilitator.cspr.cloud
+      - key: X402_NETWORK
+        value: casper:casper-test
+      - key: X402_MAX_AMOUNT
+        value: "1000"           # atomic units (6-dec token → 0.001)
+      - key: X402_PAY_TO
+        sync: false             # merchant Casper account hash
+      - key: X402_ASSET
+        sync: false             # CEP-18 token contract hash
+      - key: X402_FACILITATOR_API_KEY
+        sync: false             # sponsored CSPR.cloud key from the buildathon
+      # Casper MCP toolset stays OFF on Render (needs Docker, which the
+      # Python image doesn't have). Enable it locally for the demo. The
+      # x402 paywall above is the deployed on-chain surface.
+      - key: CASPER_MCP_ENABLED
+        value: "0"
+
       # ---- Optional ----------------------------------------------
       - key: COACH_BACKEND_URL
         sync: false   # The kajota-mobile-backend Render URL, if used
