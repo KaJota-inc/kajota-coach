@@ -58,10 +58,13 @@ def _configured_cfg(**overrides) -> x.X402Config:
 
 def _b64_payload() -> str:
     payload = {
-        "x402Version": 1,
-        "scheme": "exact",
-        "network": x.NETWORK_TESTNET,
-        "payload": {"signature": "0xsig", "authorization": {"from": "a", "to": "b"}},
+        "x402Version": 2,
+        "accepted": {"scheme": "exact", "network": x.NETWORK_TESTNET},
+        "payload": {
+            "signature": "0xsig",
+            "publicKey": "02deadbeef",
+            "authorization": {"from": "00a", "to": "00b"},
+        },
     }
     return base64.b64encode(json.dumps(payload).encode()).decode()
 
@@ -94,7 +97,9 @@ def test_build_payment_requirements_shape():
     req = x.build_payment_requirements(cfg, "https://api.kajota.test/coach/premium")
     assert req["scheme"] == "exact"
     assert req["network"] == x.NETWORK_TESTNET
-    assert req["maxAmountRequired"] == "1000"
+    # Casper facilitator reads `amount`, not the x402-standard `maxAmountRequired`.
+    assert req["amount"] == "1000"
+    assert "maxAmountRequired" not in req
     assert req["payTo"] == "account-hash-0xdeadbeef"
     assert req["asset"] == "hash-cep18-usdc"
     assert req["resource"].endswith("/coach/premium")
@@ -108,7 +113,10 @@ def test_build_payment_requirements_shape():
 
 def test_decode_payment_payload_base64():
     decoded = x._decode_payment_payload(_b64_payload())
-    assert decoded["scheme"] == "exact"
+    # v2 payload nests the agreed requirements under `accepted`.
+    assert decoded["x402Version"] == 2
+    assert decoded["accepted"]["scheme"] == "exact"
+    assert decoded["payload"]["publicKey"] == "02deadbeef"
 
 
 def test_decode_payment_payload_raw_json():
@@ -141,6 +149,27 @@ def test_config_from_env_defaults(monkeypatch):
     assert cfg.facilitator_url == x.DEFAULT_FACILITATOR_URL
     assert cfg.network == x.NETWORK_TESTNET  # safe default
     assert cfg.configured is False  # no payTo/asset/key → demo-stub mode
+
+
+def test_config_extra_has_required_version(monkeypatch):
+    # The facilitator rejects a payment whose requirements.extra lacks a
+    # non-empty `version` (it seeds the EIP-712 domain). from_env must always
+    # produce one, plus WCSPR-style name/decimals; X402_FEE_PAYER flows in.
+    for k in ("X402_ASSET_NAME", "X402_ASSET_VERSION", "X402_ASSET_DECIMALS", "X402_ASSET_EXTRA"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("X402_FEE_PAYER", "81d557c9deadbeef")
+    cfg = x.X402Config.from_env(description="d")
+    assert cfg.extra["version"]  # non-empty
+    assert cfg.extra["name"] == "WCSPR"
+    assert cfg.extra["decimals"] == "9"
+    assert cfg.extra["feePayer"] == "81d557c9deadbeef"
+    # And it lands in the built requirements.
+    req = x.build_payment_requirements(cfg, "https://x/y")
+    assert req["extra"]["version"]
+
+
+def test_x402_version_defaults_to_2():
+    assert x.X402_VERSION == 2
 
 
 def test_config_api_key_falls_back_to_cspr_cloud(monkeypatch):
@@ -177,7 +206,7 @@ async def test_missing_header_returns_402_price_tag():
     resp = ei.value.response
     assert resp.status_code == 402
     body = json.loads(bytes(resp.body))
-    assert body["x402Version"] == 1
+    assert body["x402Version"] == 2
     assert body["accepts"][0]["scheme"] == "exact"
     assert "X-PAYMENT" in body["error"]
     # Price tag mirrored into the header too.

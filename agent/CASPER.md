@@ -36,8 +36,9 @@ port of the standard x402 envelope (`exact` scheme, `casper:*` CAIP-2 family).
 Agent                         KaJota Coach (FastAPI)            CSPR.cloud Facilitator        Casper
   │  POST /coach/premium  ───────▶  │                                  │                         │
   │                                 │  no X-PAYMENT → 402 + price tag   │                         │
-  │  ◀── 402 { accepts:[ {scheme:"exact", network:"casper:casper-test", │                         │
-  │           maxAmountRequired, payTo, asset, ...} ] }                 │                         │
+  │  ◀── 402 { x402Version:2, accepts:[ {scheme:"exact",               │                         │
+  │           network:"casper:casper-test", amount, payTo, asset,       │                         │
+  │           extra:{name,version,decimals,feePayer}} ] }               │                         │
   │                                 │                                  │                         │
   │  sign EIP-712 transfer_with_authorization over the CEP-18 token    │                         │
   │  POST /coach/premium  ─────────▶│                                  │                         │
@@ -58,19 +59,30 @@ genuine agent work — not a toy gate.
 
 ## Run the demo
 
+> **Protocol note (verified live, Jun 27, 2026).** The CSPR.cloud facilitator
+> runs **x402 v2** and reads the price field as **`amount`** (not the x402
+> standard `maxAmountRequired`). The full v2 envelope this server emits was
+> validated against the production `/verify` — every field is accepted; only a
+> real signature is left to the client. `/supported` returns schemes, networks,
+> and the sponsored `feePayer` — **not** assets.
+
 ### 0. Prereqs (one-time)
 - **Sponsored key** — the buildathon issues a CSPR.cloud facilitator key (free
-  on-chain tx). The token is sent as a raw `Authorization` header.
-- **Casper account + test CSPR** — create one in Casper Wallet, then fund it at
-  the faucet: <https://testnet.cspr.live/tools/faucet> (5,000 test CSPR, one-time).
-  This account hash is your `X402_PAY_TO` (and the payer wraps some CSPR → WCSPR
-  to actually pay).
-- **Payment asset** — Casper's reference servers settle in **WCSPR (9 decimals)**.
-  Get the exact package hash the facilitator accepts straight from it:
+  on-chain tx). Sent as a raw `Authorization` header (no `Bearer`).
+- **Casper account + test CSPR** — create one in Casper Wallet, fund it at the
+  faucet <https://testnet.cspr.live/tools/faucet> (5,000 test CSPR, one-time).
+  `X402_PAY_TO` is that account's **"00"-prefixed account hash**, not the public
+  key (the facilitator rejects a raw pubkey).
+- **feePayer** — the facilitator sponsors gas; read its account from
+  `/supported`:
   ```sh
   export X402_FACILITATOR_API_KEY=<sponsored-key>
-  python scripts/x402_demo.py --supported     # prints accepted networks + assets
+  python scripts/x402_demo.py --supported     # prints networks + feePayer
   ```
+- **Payment asset** — a CEP-18 token (package hash) that implements
+  `transfer_with_authorization`. A plain CEP-18 won't settle; use the
+  buildathon's WCSPR-with-authorization or deploy one (Odra). This is the
+  merchant's choice, set as `X402_ASSET`.
 
 ### 1. Configure
 ```sh
@@ -96,7 +108,7 @@ prints the decoded Casper price tag:
 python scripts/x402_demo.py --url http://localhost:8080
 # → POST .../coach/premium  (no payment)
 # ← HTTP 402 Payment Required
-#     accepts[0]: scheme=exact  network=casper:casper-test  maxAmountRequired=1000
+#     accepts[0]: scheme=exact  network=casper:casper-test  amount=1000000
 #                 asset=<cep18>  payTo=<merchant>  resource=.../coach/premium
 #   …then prints the PaymentPayload skeleton a signer fills in.
 ```

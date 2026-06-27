@@ -47,8 +47,11 @@ import httpx
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-# The x402 envelope version we speak. Bump only if the facilitator does.
-X402_VERSION = 1
+# The x402 envelope version we speak. The live CSPR.cloud facilitator
+# advertises v2 on GET /supported (verified Jun 27, 2026) and reads the price
+# field as `amount` (NOT the x402-standard `maxAmountRequired`) — confirmed by
+# probing /verify. Override via X402_VERSION if the facilitator moves again.
+X402_VERSION = int(os.environ.get("X402_VERSION", "2"))
 
 # Default CSPR.cloud facilitator. Same host serves mainnet and testnet; the
 # network is selected per-request via the PaymentRequirements ``network``.
@@ -114,11 +117,26 @@ class X402Config:
         falls back to ``CSPR_CLOUD_API_KEY`` since the buildathon issues one
         sponsored key that unlocks both the facilitator and CSPR.cloud.
         """
+        # Build the CEP-18 `extra` the facilitator needs: a non-empty
+        # `version` is mandatory (it seeds the EIP-712 domain), plus token
+        # `name`/`decimals`. Defaults describe WCSPR (what Casper's reference
+        # servers settle in). `feePayer` is the facilitator's sponsored gas
+        # account — fetch it from GET /supported and set X402_FEE_PAYER.
+        # A raw X402_ASSET_EXTRA JSON blob, if given, overrides these.
+        extra: dict[str, Any] = {
+            "name": os.environ.get("X402_ASSET_NAME", "WCSPR"),
+            "version": os.environ.get("X402_ASSET_VERSION", "1"),
+            "decimals": os.environ.get("X402_ASSET_DECIMALS", "9"),
+        }
+        fee_payer = os.environ.get("X402_FEE_PAYER", "").strip()
+        if fee_payer:
+            extra["feePayer"] = fee_payer
         extra_raw = os.environ.get("X402_ASSET_EXTRA", "").strip()
-        try:
-            extra = json.loads(extra_raw) if extra_raw else {}
-        except json.JSONDecodeError:
-            extra = {}
+        if extra_raw:
+            try:
+                extra.update(json.loads(extra_raw))
+            except json.JSONDecodeError:
+                pass
         return cls(
             facilitator_url=os.environ.get(
                 "X402_FACILITATOR_URL", DEFAULT_FACILITATOR_URL
@@ -150,13 +168,20 @@ def build_payment_requirements(cfg: X402Config, resource: str) -> dict[str, Any]
     return {
         "scheme": "exact",
         "network": cfg.network,
-        "maxAmountRequired": cfg.max_amount_required,
+        # Casper's facilitator reads `amount` (not the x402-standard
+        # `maxAmountRequired`). Atomic units of the CEP-18 asset.
+        "amount": cfg.max_amount_required,
         "resource": resource,
         "description": cfg.description,
         "mimeType": cfg.mime_type,
+        # Recipient account-hash, "00"-prefixed (NOT a public key).
         "payTo": cfg.pay_to,
         "maxTimeoutSeconds": cfg.max_timeout_seconds,
+        # CEP-18 contract package hash (must implement transfer_with_authorization).
         "asset": cfg.asset,
+        # extra MUST carry a non-empty `version` (EIP-712 domain) and the
+        # token `name`/`decimals`; `feePayer` (the facilitator's sponsored gas
+        # account) is echoed from GET /supported when known.
         "extra": cfg.extra,
     }
 

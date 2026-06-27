@@ -45,7 +45,7 @@ def _decode_requirements(resp: httpx.Response) -> None:
         for k in (
             "scheme",
             "network",
-            "maxAmountRequired",
+            "amount",
             "asset",
             "payTo",
             "resource",
@@ -59,17 +59,23 @@ def _decode_requirements(resp: httpx.Response) -> None:
 
 
 def _payload_skeleton(requirements: dict) -> dict:
-    """The PaymentPayload a real signer fills in and base64-encodes."""
+    """The v2 PaymentPayload a real signer fills in and base64-encodes.
+
+    Shape verified against the live CSPR.cloud facilitator (Jun 27, 2026):
+    top-level `accepted` echoes the requirements; `payload` carries the
+    secp256k1 EIP-712 signature, the payer public key, and the signed
+    transfer_with_authorization fields.
+    """
     return {
-        "x402Version": 1,
-        "scheme": "exact",
-        "network": requirements.get("network"),
+        "x402Version": 2,
+        "accepted": requirements,
         "payload": {
-            "signature": "<ed25519 sig over EIP-712 transfer_with_authorization>",
+            "signature": "<65-byte secp256k1 EIP-712 sig over transfer_with_authorization, hex>",
+            "publicKey": "<payer public key hex, e.g. 02...>",
             "authorization": {
-                "from": "<payer account hash>",
+                "from": "<payer account-hash, 00-prefixed>",
                 "to": requirements.get("payTo"),
-                "value": requirements.get("maxAmountRequired"),
+                "value": requirements.get("amount"),
                 "validAfter": "<unix ts>",
                 "validBefore": "<unix ts>",
                 "nonce": "<random 32-byte hex>",
