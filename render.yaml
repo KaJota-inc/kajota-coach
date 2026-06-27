@@ -74,11 +74,11 @@ services:
       - key: X402_NETWORK
         value: casper:casper-test
       - key: X402_MAX_AMOUNT
-        value: "1000"           # atomic units (6-dec token → 0.001)
+        value: "1000000"        # atomic units; WCSPR 9-dec → 0.001 WCSPR
       - key: X402_PAY_TO
-        sync: false             # merchant Casper account hash
+        sync: false             # merchant Casper account hash (faucet-funded)
       - key: X402_ASSET
-        sync: false             # CEP-18 token contract hash
+        sync: false             # CEP-18 package hash; WCSPR — get from /supported
       - key: X402_FACILITATOR_API_KEY
         sync: false             # sponsored CSPR.cloud key from the buildathon
       # Casper MCP toolset stays OFF on Render (needs Docker, which the

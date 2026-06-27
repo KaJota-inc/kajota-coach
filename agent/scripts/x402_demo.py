@@ -24,9 +24,14 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import sys
 
 import httpx
+
+FACILITATOR_URL = os.environ.get(
+    "X402_FACILITATOR_URL", "https://x402-facilitator.cspr.cloud"
+).rstrip("/")
 
 
 def _decode_requirements(resp: httpx.Response) -> None:
@@ -77,7 +82,36 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--url", default="http://localhost:8080")
     ap.add_argument("--payment", help="base64 PaymentPayload from a real signer")
+    ap.add_argument(
+        "--supported",
+        action="store_true",
+        help="GET the facilitator /supported (needs a CSPR.cloud key) and print "
+        "the networks + assets it accepts — that's the exact X402_ASSET to use",
+    )
+    ap.add_argument(
+        "--key",
+        default=os.environ.get("X402_FACILITATOR_API_KEY")
+        or os.environ.get("CSPR_CLOUD_API_KEY"),
+        help="CSPR.cloud key (defaults to X402_FACILITATOR_API_KEY / CSPR_CLOUD_API_KEY)",
+    )
     args = ap.parse_args()
+
+    if args.supported:
+        if not args.key:
+            print("--supported needs a key: pass --key or set X402_FACILITATOR_API_KEY")
+            return 1
+        print(f"→ GET {FACILITATOR_URL}/supported")
+        resp = httpx.get(
+            f"{FACILITATOR_URL}/supported",
+            headers={"Authorization": args.key},
+            timeout=30,
+        )
+        print(f"← HTTP {resp.status_code}")
+        try:
+            print(json.dumps(resp.json(), indent=2))
+        except ValueError:
+            print(resp.text[:1000])
+        return 0 if resp.status_code == 200 else 1
 
     endpoint = f"{args.url.rstrip('/')}/coach/premium"
 

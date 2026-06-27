@@ -58,15 +58,26 @@ genuine agent work — not a toy gate.
 
 ## Run the demo
 
-### 0. Get a sponsored CSPR.cloud key
-The buildathon issues a sponsored facilitator key (free on-chain tx). Drop it
-in `agent/.env.casper` (see `.env.casper.example`).
+### 0. Prereqs (one-time)
+- **Sponsored key** — the buildathon issues a CSPR.cloud facilitator key (free
+  on-chain tx). The token is sent as a raw `Authorization` header.
+- **Casper account + test CSPR** — create one in Casper Wallet, then fund it at
+  the faucet: <https://testnet.cspr.live/tools/faucet> (5,000 test CSPR, one-time).
+  This account hash is your `X402_PAY_TO` (and the payer wraps some CSPR → WCSPR
+  to actually pay).
+- **Payment asset** — Casper's reference servers settle in **WCSPR (9 decimals)**.
+  Get the exact package hash the facilitator accepts straight from it:
+  ```sh
+  export X402_FACILITATOR_API_KEY=<sponsored-key>
+  python scripts/x402_demo.py --supported     # prints accepted networks + assets
+  ```
 
 ### 1. Configure
 ```sh
 cd agent
 cp .env.casper.example .env.casper
-# fill X402_PAY_TO, X402_ASSET, X402_FACILITATOR_API_KEY; set CASPER_MCP_ENABLED=1 for the MCP demo
+# fill X402_PAY_TO, X402_ASSET (from --supported), X402_FACILITATOR_API_KEY;
+# set CASPER_MCP_ENABLED=1 for the MCP demo
 set -a; . .env.casper; set +a
 ```
 

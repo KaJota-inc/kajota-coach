@@ -85,7 +85,9 @@ class X402Config:
     network: str
     pay_to: str
     asset: str
-    # Atomic units of ``asset`` (e.g. 6-decimal CEP-18 → 1000 == 0.001 token).
+    # Atomic units of ``asset``. The Casper reference servers settle in WCSPR
+    # (9 decimals), so 1_000_000 == 0.001 WCSPR — the canonical "$0.001"
+    # micropayment. Scale to your token's decimals if you use a different one.
     max_amount_required: str
     description: str
     # Bearer/opaque token for the facilitator. The buildathon hands teams a
@@ -124,7 +126,7 @@ class X402Config:
             network=os.environ.get("X402_NETWORK", NETWORK_TESTNET),
             pay_to=os.environ.get("X402_PAY_TO", ""),
             asset=os.environ.get("X402_ASSET", ""),
-            max_amount_required=os.environ.get("X402_MAX_AMOUNT", "1000"),
+            max_amount_required=os.environ.get("X402_MAX_AMOUNT", "1000000"),
             description=description,
             api_key=(
                 os.environ.get("X402_FACILITATOR_API_KEY")
