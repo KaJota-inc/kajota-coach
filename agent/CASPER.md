@@ -120,20 +120,30 @@ curl -i -X POST localhost:8080/coach/premium -H 'content-type: application/json'
 #   PAYMENT-REQUIRED: <base64 requirements>
 ```
 
-To complete a paid call, a Casper signer produces the base64 `PaymentPayload`
-(EIP-712 `transfer_with_authorization` over the CEP-18 token — use the
-`make-software/casper-x402` JS/Go client, or CSPR.click in a browser), then:
+To complete a **real on-chain settlement**, use the Node client signer
+(`scripts/x402_client.mjs`). It reuses Casper's audited
+`@make-software/casper-x402` + `casper-js-sdk` to sign the EIP-712
+`transfer_with_authorization`, so `wrapFetchWithPayment` does the whole
+402 → sign → retry automatically:
 
 ```sh
-python scripts/x402_demo.py --payment "<base64-signed-payload>"
-# ← HTTP 200 — paid. settlement: { "transaction":"<casper deploy hash>", "settled":true }
-#   X-PAYMENT-RESPONSE: <base64 receipt>
+cd scripts && npm install
+export CLIENT_PRIVATE_KEY_PATH=./payer.pem   # payer key; account must hold Wrapped CSPR
+export CLIENT_KEY_ALGO=secp256k1
+export SERVER_URL=http://localhost:8080
+node x402_client.mjs
+# 🌐 POST .../coach/premium  (will pay on 402)
+# ✅ HTTP 200
+# 💰 On-chain settlement:  network=casper:casper-test  deploy hash=<...>  payer=<...>
 ```
 
-> The server side (this repo) — building the 402 price tag, then `/verify` +
-> `/settle` against the Casper facilitator — is what the buildathon scores for
-> the payments track. The signing half is the client's, and Casper ships
-> reference signers for it.
+> **Why the signer is Node, not Python.** The server side (this repo) — the
+> 402 price tag, then `/verify` + `/settle` against the Casper facilitator — is
+> what the payments track scores, and it's pure Python, validated live. The
+> client *signing* step is secp256k1 EIP-712 over Casper's custom domain;
+> reimplementing that crypto in Python would be unjustified risk, so the client
+> reuses Casper's official library. `scripts/x402_demo.py --payment <b64>` also
+> accepts a pre-signed payload if you'd rather sign another way (CSPR.click, Go).
 
 ### 4. Agent reads Casper over MCP
 With `CASPER_MCP_ENABLED=1` (Docker required):
