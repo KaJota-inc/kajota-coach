@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Casper x402 client signer for KaJota Coach's /coach/premium endpoint",
   "scripts": {
-    "pay": "node x402_client.mjs"
+    "pay": "node x402_client.mjs",
+    "bridge": "node x402_signer_bridge.mjs"
   },
   "dependencies": {
     "@make-software/casper-x402": "^1.0.0",
