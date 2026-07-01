@@ -59,6 +59,21 @@ genuine agent work — not a toy gate.
 
 ## Run the demo
 
+**One command** (from the repo root) brings up the whole local stack — agent
+(`:8080`) + signer bridge (`:4040`) + Metro (`:8088`) — with health checks and
+clean Ctrl-C shutdown:
+
+```sh
+export CLIENT_PRIVATE_KEY_PATH=./agent/scripts/payer.pem   # for one-tap pay
+npm run demo
+# then, in another terminal:  npm run ios   (open the app, tap Premium Insight)
+```
+
+It loads `agent/.env.casper`, skips the bridge gracefully if no payer key is
+set (the app still shows the live 402), and refuses to start if the Metro port
+is held by a stale server from another project. The manual steps below are the
+same stack, broken out.
+
 > **Protocol note (verified live, Jun 27, 2026).** The CSPR.cloud facilitator
 > runs **x402 v2** and reads the price field as **`amount`** (not the x402
 > standard `maxAmountRequired`). The full v2 envelope this server emits was
