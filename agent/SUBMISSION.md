@@ -13,9 +13,27 @@ HTTP-native micropayments settled on Casper.
 **Tracks:** Agentic AI · DeFi & Payments
 
 **Links:**
-- Repo / PR: https://github.com/KaJota-inc/kajota-coach/pull/3 (branch `hackathon/casper`)
+- Repo (branch `hackathon/casper`): https://github.com/KaJota-inc/kajota-coach/tree/hackathon/casper
+- PR (the full diff for this Buildathon): https://github.com/KaJota-inc/kajota-coach/pull/3
 - Demo video: [YouTube link — record before submit]
 - Write-up: `agent/CASPER.md` in the repo
+
+## What's new for this Buildathon
+
+KaJota Coach is our existing open-source AI shopping agent. **Everything that
+makes it a Casper project was built new for this Buildathon** and lives on the
+`hackathon/casper` branch (see the PR diff):
+
+- a server-side **x402 v2 protocol** implementation for Casper (`x402_casper.py`),
+- our own **deployed CEP-18** contract with `transfer_with_authorization`
+  (`deploy_cep18x402.mjs` → KaJota USD on testnet),
+- the **client signer + facilitator settlement** path (`x402_client.mjs`,
+  `settle_once.mjs`, signer bridge),
+- the **Casper MCP** agent integration, and a **mobile Premium screen** for the
+  pay-per-call flow.
+
+We're upfront that the base agent pre-exists; the Casper integration — the part
+this Buildathon is about — is original and new, and it settles on-chain today.
 
 ## On-chain proof (Casper Testnet)
 
@@ -83,9 +101,39 @@ full agent-payment loop runs against Casper's real infrastructure, not a mock.
 - **Payments** — x402 v2 (`exact` scheme, `casper:casper-test`), settled on Casper
 - 14 unit tests; isolated server-side x402 module in pure Python
 
-## What's next
+## Ecosystem contribution & long-term impact
 
-A real on-chain settlement in the demo via the client signer (Casper's
-reference `make-software/casper-x402` client produces the `X-PAYMENT`), then
-extend to agent-to-agent commerce: KaJota agents paying each other per call
-across the mesh.
+Casper's strategic bet right now is its **AI Toolkit** — x402, the MCP server,
+Odra, CSPR.cloud. Most projects use one piece. **This project wires the whole
+stack together and settles on-chain**, so it doubles as a **public reference
+implementation** other Casper builders can copy:
+
+- a **working server-side x402 v2** in Python (no official Python SDK existed —
+  we built it and documented every wire-format correction we found against the
+  live facilitator: `amount` vs `maxAmountRequired`, v2 envelope, account-hash
+  `payTo`, `transfer_with_authorization` assets, mandatory `extra.version`);
+- an **end-to-end deploy → sign → settle** flow with runnable scripts and a
+  one-command demo (`npm run demo`);
+- the **Casper MCP** composed alongside other MCP partners in a real agent.
+
+Every finding is in `CASPER.md` and the code is MIT-licensed — the kind of
+"how do I actually ship x402 on Casper?" answer the ecosystem needs to grow
+agentic-payments adoption. That's the long-term impact: not one app, but a
+template that lowers the barrier for the next hundred Casper AI builders.
+
+## Roadmap (real project, not a hackathon throwaway)
+
+KaJota is a live product (AI commerce for African micro-merchants), not a demo.
+Concrete next steps on Casper:
+
+1. **Mainnet x402** — flip the network to `casper:casper` and settle premium
+   agent calls in production against a mainnet CEP-18.
+2. **Agent-to-agent commerce** — KaJota agents paying *each other* per call
+   (the Coach paying a pricing agent, a logistics agent) — an x402 mesh.
+3. **Stablecoin settlement** — swap KaJota USD for a Casper-native stablecoin so
+   merchant payouts settle in a stable unit, tying x402 to real DeFi/RWA flows.
+4. **Publish the reference** — extract the Python x402 layer into a standalone
+   `casper-x402-python` package for the ecosystem.
+
+Links, socials, and the live product: [KaJota — add kajota.io / X / repo org
+links at submission time].
