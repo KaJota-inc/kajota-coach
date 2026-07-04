@@ -105,7 +105,9 @@ async function main() {
     .installOrUpgrade()
     .runtimeArgs(args)
     .chainName(CHAIN_NAME)
-    .payment(BigInt(PAYMENT))
+    // The SDK serializer expects a Number here (not BigInt). 800 CSPR is well
+    // within Number.MAX_SAFE_INTEGER, so this is lossless.
+    .payment(Number(PAYMENT))
     .build();
   tx.sign(privateKey);
 
