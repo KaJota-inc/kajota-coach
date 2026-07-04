@@ -17,6 +17,19 @@ HTTP-native micropayments settled on Casper.
 - Demo video: [YouTube link — record before submit]
 - Write-up: `agent/CASPER.md` in the repo
 
+## On-chain proof (Casper Testnet)
+
+Everything below is live and verifiable on cspr.live:
+
+| What | Value |
+|---|---|
+| **Our CEP-18 contract** (KaJota USD, with `transfer_with_authorization`) | package `354ca0ad7ef8c97a02b195a1f39e96908fd3bf20d6ec4255850d05f1784fb404` |
+| **Contract deploy tx** | [`df084784…`](https://testnet.cspr.live/transaction/df0847848800502b1b6919c1ad9a2dc0845c309006382b21ef8ad759d7c4171a) |
+| **x402 settlement tx** (agent micropayment — a real `transfer_with_authorization`) | [`88c4153e…`](https://testnet.cspr.live/transaction/88c4153e211011915b7b7bc2af718ada2b506266512701a7488a80f77a58b4a3) — processed, block 8394190 |
+
+The settlement's gas was paid by Casper's sponsored x402 **feePayer** — the
+agent moved value without holding native gas, exactly the x402 promise.
+
 ---
 
 ## The problem
@@ -54,12 +67,13 @@ live (Jun 27, 2026), correcting several things the public examples get wrong:
 - The facilitator runs **x402 v2** and reads the price field as `amount` (not
   the x402-standard `maxAmountRequired`).
 - `payTo` is a "00"-prefixed **account-hash**; the asset must implement
-  **`transfer_with_authorization`** (we wired the live testnet Wrapped CSPR,
-  `3d80df21…847c1e`); `extra.version` is mandatory.
+  **`transfer_with_authorization`** (we deployed our own — KaJota USD); and
+  `extra.version` (the EIP-712 domain) is mandatory.
 
-Posting our server's real PaymentRequirements to the live `/verify` passes
-**every field check**, stopping only at signature verification — proof the
-server side is correct end-to-end against Casper's real facilitator.
+And it doesn't just pass `/verify` — **it settled for real.** We deployed our
+own CEP-18, signed a `transfer_with_authorization`, and the production
+facilitator settled it on Casper (tx `88c4153e…`, processed on-chain). The
+full agent-payment loop runs against Casper's real infrastructure, not a mock.
 
 ## Tech stack
 
