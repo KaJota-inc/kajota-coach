@@ -11,6 +11,12 @@ dependencies = [
     "pydantic-settings>=2.4.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",  # FastAPI TestClient transport
+]
+
 [project.scripts]
 kajota-mesh-skill = "kajota_mesh_skill.main:run"
 

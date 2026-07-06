@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from kajota_mesh_skill.mesh import MeshClient
+from kajota_mesh_skill.scoring import ScoreResult, TradeHistory, score_trade_history
 from kajota_mesh_skill.settings import Settings
 
 app = FastAPI(
@@ -76,7 +77,35 @@ class ActionResponse(BaseModel):
     explorer_url: str
 
 
+class ScoreRequest(BaseModel):
+    subject: str = Field(
+        description="The SME's wallet address (the credit-score subject)."
+    )
+    history: TradeHistory
+
+
+class ScoreResponse(BaseModel):
+    subject: str
+    result: ScoreResult
+    anchored: bool = Field(
+        description="True when the score hash was written on-chain."
+    )
+    tx_hash: str
+    explorer_url: str
+
+
+class OnChainScoreResponse(BaseModel):
+    subject: str
+    score: int
+    band: int
+    score_hash: str
+    attested_at: int
+    attester: str
+
+
 def _explorer_url_for_tx(tx_hash: str, chain_id: int) -> str:
+    if chain_id == 80002:
+        return f"https://amoy.polygonscan.com/tx/{tx_hash}"
     if chain_id == 11155111:
         return f"https://sepolia.etherscan.io/tx/{tx_hash}"
     return f"https://etherscan.io/tx/{tx_hash}"
@@ -172,6 +201,54 @@ def refund(
         action="refund",
         tx_hash=tx_hash,
         explorer_url=_explorer_url_for_tx(tx_hash, _settings.chain_id),
+    )
+
+
+@app.post("/credit/score", response_model=ScoreResponse, tags=["credit"])
+def credit_score(
+    body: ScoreRequest,
+    client: Annotated[MeshClient, Depends(get_client)],
+) -> ScoreResponse:
+    """Score an SME's trade-credit and anchor the result on-chain.
+
+    Runs the deterministic rules-based engine over the supplied trade
+    history (order volume + tenure + on-chain repayment record), then
+    anchors a hash of the scoring payload plus the headline score/band
+    on ``ScoreAttestation``. The raw financials never touch chain — only
+    the verifiable hash does. When the anchor isn't configured/live the
+    score is still returned, just un-anchored (``anchored=false``).
+    """
+    result = score_trade_history(body.subject, body.history)
+    tx_hash = client.attest_score(
+        body.subject, result.payload_hash, result.score, result.band_index
+    )
+    return ScoreResponse(
+        subject=body.subject,
+        result=result,
+        anchored=client.score_anchor_live,
+        tx_hash=tx_hash,
+        explorer_url=_explorer_url_for_tx(tx_hash, _settings.chain_id),
+    )
+
+
+@app.get("/credit/{subject}", response_model=OnChainScoreResponse, tags=["credit"])
+def get_credit_score(
+    subject: str,
+    client: Annotated[MeshClient, Depends(get_client)],
+) -> OnChainScoreResponse:
+    """Read the latest on-chain credit-score attestation for an SME."""
+    view = client.get_score(subject)
+    if view is None:
+        raise HTTPException(
+            404, f"no on-chain score for {subject} (or anchor not live)"
+        )
+    return OnChainScoreResponse(
+        subject=view.subject,
+        score=view.score,
+        band=view.band,
+        score_hash=view.score_hash,
+        attested_at=view.attested_at,
+        attester=view.attester,
     )
 
 

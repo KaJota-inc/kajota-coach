@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     registry_address: str = Field(default="0xfce6bd68d8d6f858d447f537d206c1e354b44315")
     escrow_address: str = Field(default="0x599869cef2e4c52e2c9074caaf8f9fb0cb191776")
     usdc_address: str = Field(default="0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238")
+    # Ignyte SME Trade Finance — on-chain trade-credit anchor. Empty
+    # until deployed; when unset the scoring endpoint still returns the
+    # score but skips the on-chain anchor (dry-run behaviour).
+    score_attestation_address: str = Field(default="")
     chain_id: int = 11155111
     dry_run: bool = False
 

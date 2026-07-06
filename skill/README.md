@@ -40,7 +40,21 @@ Defaults baked into [`settings.py`](./kajota_mesh_skill/settings.py):
 | `MESH_REGISTRY_ADDRESS` | `0xfce6bd68d8d6f858d447f537d206c1e354b44315` |
 | `MESH_ESCROW_ADDRESS` | `0x599869cef2e4c52e2c9074caaf8f9fb0cb191776` |
 | `MESH_USDC_ADDRESS` | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` |
+| `MESH_SCORE_ATTESTATION_ADDRESS` | `""` — set to the deployed `ScoreAttestation` address to anchor credit scores on-chain (Ignyte SME Trade Finance). Empty = scores computed but un-anchored. |
 | `MESH_CHAIN_ID` | `11155111` |
+
+## SME trade-credit scoring (Ignyte)
+
+Two extra routes power the SME Trade Finance flow:
+
+| Route | What |
+|---|---|
+| `POST /credit/score` | Runs the deterministic rules-based engine ([`scoring.py`](./kajota_mesh_skill/scoring.py)) over a supplier's trade history (order volume + tenure + on-chain repayment record), returns a 0..1000 score, risk band (A–E), recommended advance rate, and a per-factor breakdown — then anchors a **hash** of the payload + headline score/band on `ScoreAttestation`. Raw financials never touch chain. |
+| `GET /credit/{subject}` | Reads the latest on-chain attestation for an SME wallet. |
+
+The engine is pure (same inputs → same score → same hash), so the
+on-chain hash is a verifiable credential: a financier recomputes it from
+the shared payload via `ScoreAttestation.verifyPayload`.
 
 ## NANDA Index registration
 

@@ -39,6 +39,18 @@ class DepositView:
 _STATUS_BY_INDEX = {0: "pending", 1: "released", 2: "refunded"}
 
 
+@dataclass
+class ScoreView:
+    """Plain-data projection of an on-chain credit-score attestation."""
+
+    subject: str
+    score: int
+    band: int
+    score_hash: str
+    attested_at: int
+    attester: str
+
+
 class MeshClient:
     """Thin wrapper exposing only the operations the skill service needs."""
 
@@ -47,6 +59,7 @@ class MeshClient:
         self._w3: Web3 | None = None
         self._escrow: Any = None
         self._registry: Any = None
+        self._scores: Any = None
         self._account: Any = None
         if settings.is_live:
             self._connect()
@@ -65,11 +78,24 @@ class MeshClient:
             address=Web3.to_checksum_address(s.registry_address),
             abi=_load_abi("CosellRegistry"),
         )
+        # ScoreAttestation is optional — only bind it when an address is
+        # configured, so the escrow surface keeps working before the
+        # trade-finance anchor is deployed.
+        if s.score_attestation_address:
+            self._scores = w3.eth.contract(
+                address=Web3.to_checksum_address(s.score_attestation_address),
+                abi=_load_abi("ScoreAttestation"),
+            )
         self._w3 = w3
 
     @property
     def live(self) -> bool:
         return self._w3 is not None
+
+    @property
+    def score_anchor_live(self) -> bool:
+        """True when a ScoreAttestation contract is wired up and we're live."""
+        return self.live and self._scores is not None
 
     @property
     def service_address(self) -> str:
@@ -133,6 +159,53 @@ class MeshClient:
         tx_hash = self._w3.eth.send_raw_transaction(signed.raw_transaction)
         return tx_hash.hex()
 
+    def attest_score(
+        self, subject: str, score_hash: str, score: int, band: int
+    ) -> str:
+        """Anchor a credit score on ``ScoreAttestation`` and return the tx hash.
+
+        Returns a synthetic ``0xdry-...`` hash when the anchor isn't wired
+        up (dry-run, or no ScoreAttestation address configured) — the
+        caller still gets a fully-computed score, just un-anchored.
+        """
+        if not self.score_anchor_live:
+            return f"0xdry-attest-{subject[:16]}"
+        subject_addr = Web3.to_checksum_address(subject)
+        hash_bytes = bytes.fromhex(score_hash.removeprefix("0x"))
+        tx = self._scores.functions.attest(
+            subject_addr, hash_bytes, int(score), int(band)
+        ).build_transaction(
+            {
+                "from": self._account.address,
+                "nonce": self._w3.eth.get_transaction_count(self._account.address),
+                "chainId": self._settings.chain_id,
+            }
+        )
+        signed = self._account.sign_transaction(tx)
+        tx_hash = self._w3.eth.send_raw_transaction(signed.raw_transaction)
+        return tx_hash.hex()
+
+    def get_score(self, subject: str) -> ScoreView | None:
+        """Read the latest on-chain attestation for a subject, or None."""
+        if not self.score_anchor_live:
+            return None
+        subject_addr = Web3.to_checksum_address(subject)
+        try:
+            score_hash, score, band, attested_at, attester = self._scores.functions.getScore(
+                subject_addr
+            ).call()
+        except Exception:
+            # NoAttestation() revert (never scored) or a read error.
+            return None
+        return ScoreView(
+            subject=subject_addr,
+            score=int(score),
+            band=int(band),
+            score_hash="0x" + score_hash.hex(),
+            attested_at=int(attested_at),
+            attester=attester,
+        )
+
     def chain_status(self) -> dict[str, Any]:
         """Quick health report for the ``/healthz`` endpoint."""
         if not self.live:
@@ -140,6 +213,7 @@ class MeshClient:
                 "mode": "dry_run",
                 "service_address": self.service_address,
                 "escrow": self._settings.escrow_address,
+                "score_anchor": self._settings.score_attestation_address or None,
                 "chain_id": self._settings.chain_id,
             }
         return {
@@ -148,5 +222,7 @@ class MeshClient:
             "block_number": int(self._w3.eth.block_number),
             "escrow": self._settings.escrow_address,
             "registry": self._settings.registry_address,
+            "score_anchor": self._settings.score_attestation_address or None,
+            "score_anchor_live": self.score_anchor_live,
             "chain_id": self._settings.chain_id,
         }
