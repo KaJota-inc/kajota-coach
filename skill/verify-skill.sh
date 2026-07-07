@@ -39,25 +39,8 @@ call POST /escrow/quote '{"amount_usd": 42.5}' | jq .
 step "3. Escrow release — settle a deposit to the seller (dry-run: synthetic tx)"
 call POST /escrow/release "{\"deposit_id\": \"${DEPOSIT_ID}\"}" | jq .
 
-step "4. Credit score — deterministic rules-based SME trade-credit scoring"
-call POST /credit/score "$(cat <<EOF
-{
-  "subject": "${SUBJECT}",
-  "history": {
-    "months_active": 18,
-    "completed_orders": 84,
-    "gross_volume_usd": 32000.0,
-    "receivables_financed": 12,
-    "receivables_repaid": 11,
-    "receivables_defaulted": 1,
-    "disputes": 0,
-    "outstanding_usd": 4500.0
-  }
-}
-EOF
-)" | jq .
-
-step "5. Credit lookup — read on-chain attestation (may 404 in dry-run)"
-call GET "/credit/${SUBJECT}" 2>/dev/null | jq . || echo "(404 expected in dry-run — anchor not live)"
+step "4. Escrow deposit lookup — read on-chain state for a deposit id"
+call GET "/escrow/deposit/${DEPOSIT_ID}" 2>/dev/null | jq . \
+  || echo "(404 expected in dry-run — chain not queried)"
 
 printf "\n\033[1;32mAll steps succeeded against %s\033[0m\n" "${SKILL_URL}"
