@@ -40,6 +40,7 @@ import { sendAgentChat } from '@/services/coachAgent';
 import { getAuthToken } from '@/services/api';
 import { useVoiceSession } from '@/hooks/useVoiceSession';
 import VoiceMicButton from '@/components/VoiceMicButton';
+import AgentIdentityCard from '@/components/AgentIdentityCard';
 import { colors, fontSize, radius, spacing } from '@/constants/colors';
 import type {
   CoachAgentLocalMessage,
@@ -236,12 +237,18 @@ export default function CoachAgentChatScreen({ navigation }: Props) {
       ) : (
         <AgentBubble
           message={item}
-          onSignProposal={proposal =>
-            navigation.navigate('MeshSign', { proposal })
-          }
+          onSignProposal={proposal => {
+            // Aggregate every tool the agent called across the whole session
+            // so the on-chain benchmark records the full decision trace.
+            const decisions = messages
+              .filter(m => m.role === 'agent' && m.toolsCalled && m.toolsCalled.length > 0)
+              .flatMap(m => m.toolsCalled!)
+              .map(t => ({ tool: t.name, ms: t.latencyMs }));
+            navigation.navigate('MeshSign', { proposal, decisions });
+          }}
         />
       ),
-    [navigation],
+    [navigation, messages],
   );
 
   return (
@@ -250,6 +257,10 @@ export default function CoachAgentChatScreen({ navigation }: Props) {
       style={styles.root}
     >
       <StatusBar style="dark" />
+
+      {/* ERC-8004 on-chain identity + benchmark record (Mantle) — pillars
+          1 & 2 made visible in-app, read live from chain. */}
+      <AgentIdentityCard />
 
       {messages.length === 0 ? (
         <EmptyState onPick={handleSend} />

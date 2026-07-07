@@ -18,6 +18,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PrivyProvider } from '@privy-io/expo';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
+import { mantleSepoliaTestnet, sepolia } from 'viem/chains';
 
 import { colors } from '@/constants/colors';
 import { setAuthToken } from '@/services/api';
@@ -26,6 +27,7 @@ import CoachAgentChatScreen from '@/screens/CoachAgentChatScreen';
 import CoachCaptureScreen from '@/screens/CoachCaptureScreen';
 import CoachReviewScreen from '@/screens/CoachReviewScreen';
 import ConciergeScreen from '@/screens/ConciergeScreen';
+import CasperPremiumScreen from '@/screens/CasperPremiumScreen';
 import HomeScreen from '@/screens/HomeScreen';
 import MeshSignScreen from '@/screens/MeshSignScreen';
 import SignInScreen from '@/screens/SignInScreen';
@@ -112,6 +114,11 @@ export default function App() {
           name="MeshSign"
           options={{ headerShown: true, title: 'Publish on Mesh', headerTintColor: colors.text }}
         />
+        <Stack.Screen
+          component={CasperPremiumScreen}
+          name="CasperPremium"
+          options={{ headerShown: true, title: 'Premium on Casper', headerTintColor: colors.text }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -124,7 +131,14 @@ export default function App() {
     return navStack;
   }
   return (
-    <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID || undefined}>
+    <PrivyProvider
+      appId={PRIVY_APP_ID}
+      clientId={PRIVY_CLIENT_ID || undefined}
+      // Declare both chains the embedded wallet signs on: Ethereum Sepolia
+      // (CosellRegistry.register listing) and Mantle Sepolia (ERC-8004
+      // ReputationRegistry.giveFeedback — the on-chain agent benchmark).
+      supportedChains={[sepolia, mantleSepoliaTestnet]}
+    >
       {navStack}
     </PrivyProvider>
   );

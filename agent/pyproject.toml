@@ -36,10 +36,17 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "python-dotenv>=1.0.0",
 
-    # httpx — async HTTP client used by witness_client.py to mirror
-    # each chat turn to the Kajota Witness service (0G Storage memory
-    # layer). Fire-and-forget; Coach never blocks on it.
+    # httpx — used by witness_client.py (0G Witness turn-mirror) AND the
+    # Casper x402 paywall (server.py → CSPR.cloud facilitator, /verify +
+    # /settle). Pinned so neither relies on a transitive accident.
     "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+# Test-only deps. `pip install -e ".[test]"` to run the x402 unit tests.
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
 ]
 
 [project.scripts]
@@ -47,6 +54,10 @@ dependencies = [
 # demo MongoDB collections.
 kajota-agent = "kajota_concierge.server:main"
 kajota-agent-seed = "kajota_concierge.seed:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
 
 [build-system]
 requires = ["setuptools>=68"]

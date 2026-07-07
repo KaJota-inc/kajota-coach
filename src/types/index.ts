@@ -75,9 +75,13 @@ export type RootStackParamList = {
   };
   CoachAgentChat: undefined;
   Concierge: undefined;
+  CasperPremium: undefined;
   MeshSign: {
     /** Output of the agent's proposeListingForPublish tool. */
     proposal: ProposeListingForPublishResult;
+    /** Full agent decision trace for this run (every tool call across the
+     *  session) — recorded on-chain in the ERC-8004 benchmark. */
+    decisions?: { tool: string; ms: number }[];
   };
 };
 
@@ -205,6 +209,52 @@ export interface ConciergeProductCard {
   price: string;
   /** Optional extra line — target price, ETA, restock note, etc. */
   footer: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Casper x402 — pay-per-call premium insight                        */
+/*  Mirrors agent/kajota_concierge/x402_casper.py + server.py          */
+/*  (POST /coach/premium). The 402 body carries the Casper price tag;  */
+/*  a settled call returns the insight + the on-chain deploy hash.     */
+/* ------------------------------------------------------------------ */
+
+/** One x402 PaymentRequirements entry — the Casper "price tag". */
+export interface CasperPaymentRequirements {
+  scheme: string;
+  /** CAIP-2 network, e.g. "casper:casper-test". */
+  network: string;
+  /** Atomic units of `asset` (Wrapped CSPR is 9-dec → 1000000 = 0.001). */
+  amount: string;
+  resource: string;
+  description: string;
+  mimeType: string;
+  /** "00"-prefixed merchant account-hash. */
+  payTo: string;
+  maxTimeoutSeconds: number;
+  /** CEP-18 contract package hash. */
+  asset: string;
+  extra: Record<string, string>;
+}
+
+/** The 402 body the server returns when a premium call is unpaid. */
+export interface Casper402 {
+  x402Version: number;
+  accepts: CasperPaymentRequirements[];
+  error: string;
+}
+
+/** The on-chain settlement receipt attached to a paid premium turn. */
+export interface PremiumSettlement {
+  network: string;
+  /** Casper deploy hash — verifiable on cspr.live. */
+  transaction: string;
+  payer: string;
+  settled: boolean;
+}
+
+/** A settled /coach/premium response: the agent turn + the receipt. */
+export interface PremiumResponse extends ConciergeChatResponse {
+  settlement: PremiumSettlement;
 }
 
 /** Local-only chat-bubble shape used by ConciergeScreen. */
