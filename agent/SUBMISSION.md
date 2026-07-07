@@ -141,5 +141,8 @@ Concrete next steps on Casper:
 4. **Publish the reference** — extract the Python x402 layer into a standalone
    `casper-x402-python` package for the ecosystem.
 
-Links, socials, and the live product: [KaJota — add kajota.io / X / repo org
-links at submission time].
+**Links & live product:**
+- Website: https://kajota.io
+- GitHub org: https://github.com/KaJota-inc
+- Live Casper agent API: https://kajota-concierge-agent.onrender.com/coach/premium
+- Demo video: https://youtu.be/gI2CNJQU7KE
