@@ -18,6 +18,8 @@ MongoDB.
 
 from __future__ import annotations
 
+import base64
+import json
 import os
 import uuid
 from typing import Any
@@ -33,6 +35,7 @@ from kajota_concierge.agent import root_agent
 from kajota_concierge.x402_casper import (
     PaymentRequiredError,
     X402Config,
+    build_payment_requirements,
     require_payment,
 )
 
@@ -308,6 +311,51 @@ async def proactive(req: ProactiveRequest) -> ChatResponse:
         user_id=req.userId,
         session_id=req.sessionId,
         message=_PROACTIVE_PROMPT,
+    )
+
+
+@app.get("/coach/premium")
+async def coach_premium_info(request: Request) -> JSONResponse:
+    """Human/agent-friendly discovery for the paywalled endpoint.
+
+    A GET here is what happens when someone *clicks the link* (a browser, a
+    judge opening the submission's "Live API" URL). Rather than a bare
+    ``405 Method Not Allowed`` — which reads as "broken" — we answer with the
+    real x402 ``402`` challenge plus a plain-English "how to pay" note, so the
+    endpoint is self-documenting and visibly live: the price tag, asset, and
+    network are right there, exactly what a paying agent would receive.
+    """
+    resource = str(request.url).split("?", 1)[0]
+    requirements = build_payment_requirements(_X402, resource)
+    body = {
+        "x402Version": 2,
+        "accepts": [requirements],
+        "message": (
+            "This is an x402-paywalled endpoint. It settles a CEP-18 "
+            "micropayment on Casper. Send a POST with a JSON body and an "
+            "`X-PAYMENT` header carrying a signed `transfer_with_authorization`; "
+            "the CSPR.cloud facilitator settles it on-chain and the response "
+            "returns the premium insight plus the settlement receipt."
+        ),
+        "howToPay": {
+            "method": "POST",
+            "resource": resource,
+            "priceAtomic": _X402.max_amount_required,
+            "asset": _X402.asset,
+            "network": _X402.network,
+            "facilitator": _X402.facilitator_url,
+            "configured": _X402.configured,
+        },
+        "docs": "/docs",
+    }
+    header_blob = base64.b64encode(json.dumps(requirements).encode()).decode()
+    return JSONResponse(
+        status_code=402,
+        content=body,
+        headers={
+            "PAYMENT-REQUIRED": header_blob,
+            "Access-Control-Expose-Headers": "PAYMENT-REQUIRED",
+        },
     )
 
 
