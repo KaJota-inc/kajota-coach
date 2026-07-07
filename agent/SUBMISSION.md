@@ -13,6 +13,9 @@ HTTP-native micropayments settled on Casper.
 **Tracks:** Agentic AI · DeFi & Payments
 
 **Links:**
+- **Live API:** https://kajota-concierge-agent.onrender.com/coach/premium — a real
+  hosted endpoint. Call it and it answers `402` with a Casper price tag; pay it
+  and it settles on-chain and returns an agentic insight.
 - Repo (branch `hackathon/casper`): https://github.com/KaJota-inc/kajota-coach/tree/hackathon/casper
 - PR (the full diff for this Buildathon): https://github.com/KaJota-inc/kajota-coach/pull/3
 - Demo video: [YouTube link — record before submit]
@@ -44,9 +47,12 @@ Everything below is live and verifiable on cspr.live:
 | **Our CEP-18 contract** (KaJota USD, with `transfer_with_authorization`) | package `354ca0ad7ef8c97a02b195a1f39e96908fd3bf20d6ec4255850d05f1784fb404` |
 | **Contract deploy tx** | [`df084784…`](https://testnet.cspr.live/transaction/df0847848800502b1b6919c1ad9a2dc0845c309006382b21ef8ad759d7c4171a) |
 | **x402 settlement tx** (agent micropayment — a real `transfer_with_authorization`) | [`88c4153e…`](https://testnet.cspr.live/transaction/88c4153e211011915b7b7bc2af718ada2b506266512701a7488a80f77a58b4a3) — processed, block 8394190 |
+| **Settlement from the LIVE hosted API** (Render → facilitator → chain) | [`4bb3b1cc…`](https://testnet.cspr.live/transaction/4bb3b1cca44224687ff31e4bc6e4be397d2c1db8a7570f13a3d1630b7d8b01e4) — processed, block 8426745 |
 
 The settlement's gas was paid by Casper's sponsored x402 **feePayer** — the
-agent moved value without holding native gas, exactly the x402 promise.
+agent moved value without holding native gas, exactly the x402 promise. The
+last row was produced by paying the **deployed** `/coach/premium` endpoint —
+the whole loop runs in production, not just locally.
 
 ---
 
