@@ -18,7 +18,7 @@ HTTP-native micropayments settled on Casper.
   and it settles on-chain and returns an agentic insight.
 - Repo (branch `hackathon/casper`): https://github.com/KaJota-inc/kajota-coach/tree/hackathon/casper
 - PR (the full diff for this Buildathon): https://github.com/KaJota-inc/kajota-coach/pull/3
-- Demo video: [YouTube link — record before submit]
+- Demo video: https://youtu.be/gI2CNJQU7KE
 - Write-up: `agent/CASPER.md` in the repo
 
 ## What's new for this Buildathon
