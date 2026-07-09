@@ -26,9 +26,33 @@
   },
   "skills": [
     {
+      "id": "wallet.create",
+      "label": "Create a managed demo wallet",
+      "description": "Provisions a fresh keypair server-side and funds it with a small ETH grant (gas) and USDC grant from the treasury. Returns a wallet_id the caller passes to escrow.lock. Demo wallets only — not for production custody.",
+      "languages": ["en"],
+      "input_modes": ["text"],
+      "output_modes": ["text"]
+    },
+    {
+      "id": "wallet.balance",
+      "label": "Read a managed wallet's balances",
+      "description": "Returns ETH + USDC balances for a managed wallet.",
+      "languages": ["en"],
+      "input_modes": ["text"],
+      "output_modes": ["text"]
+    },
+    {
       "id": "escrow.quote",
       "label": "Convert USD to USDC base units",
       "description": "Pure compute: convert a human-readable USD amount into USDC base units (6 decimals).",
+      "languages": ["en"],
+      "input_modes": ["text"],
+      "output_modes": ["text"]
+    },
+    {
+      "id": "escrow.lock",
+      "label": "Server-signed deposit into escrow",
+      "description": "Approves USDC and calls CosellEscrow.deposit from a managed buyer wallet, both signed server-side. Returns the deposit_id parsed from the Deposited event. The single HTTP call that keeps the whole escrow lifecycle inside SKILL.md.",
       "languages": ["en"],
       "input_modes": ["text"],
       "output_modes": ["text"]

@@ -46,13 +46,23 @@ Once you're at `/go/submit`, expect fields like these (verified language):
 - **GitHub link**: https://github.com/KaJota-inc/kajota-coach/tree/hackathon/nanda-mesh-skill/skill
 - **SKILL.md URL**: https://kajota-mesh-skill.onrender.com/skill.md *(served live from the deploy — see main.py `/skill.md` route)*
 - **Endpoints list**:
-  - `GET  /healthz` — service + chain liveness probe
-  - `POST /escrow/quote` — convert USD → USDC base units
+  - `GET  /healthz` — liveness + chain probe
+  - `POST /wallet/create` — provision a fresh managed demo wallet, funded from treasury
+  - `GET  /wallet/{id}` — ETH + USDC balances
+  - `POST /escrow/quote` — USD → USDC base units
+  - `POST /escrow/lock` — server-signed approve + deposit; returns deposit_id
   - `GET  /escrow/deposit/{id}` — read deposit state
   - `POST /escrow/release` — release USDC to seller (authorised)
   - `POST /escrow/refund` — refund USDC to buyer (authorised)
 - **Steps to use** (from SKILL.md):
-  > Buyer approves `CosellEscrow` to spend USDC, calls `deposit(listingId, amount)` from their own wallet; retains the `depositId` from the `Deposited` event. Off-chain: seller delivers. Buyer agent POSTs `/escrow/release {deposit_id}`; service signs and broadcasts. `GET /escrow/deposit/{id}` returns `status: "released"`.
+  > 1. `POST /wallet/create` → get a buyer `wallet_id`, funded automatically.
+  > 2. `POST /escrow/quote` with USD price → get `gross_amount_units`.
+  > 3. `POST /escrow/lock` with `buyer_wallet_id` + `listing_id` + `gross_amount_units` → get `deposit_id`.
+  > 4. Off-chain: verify delivery.
+  > 5. `POST /escrow/release` with `deposit_id` → settles on Sepolia.
+  > 6. Or `POST /escrow/refund` if delivery failed.
+  > 7. `GET /escrow/deposit/{id}` at any time to read state.
+  > Every step is one HTTP call. No wallet keys leave the service.
 - **Demo video URL**: *(paste after recording)*
 - **Discoverable via NANDA Index?** Yes — AgentFacts at `${DEPLOY_URL}/agentfacts.json`.
 
@@ -60,19 +70,18 @@ Once you're at `/go/submit`, expect fields like these (verified language):
 
 ## 3. 90-second demo video beat sheet
 
-Record with QuickTime screen-record or `simctl` (see [[feedback_ios_sim_recording]]
-if you want the sim pattern).  Terminal + browser split.
+Record with QuickTime screen-record. Terminal + browser split.
 
 | Sec | Screen | Voiceover |
 |---|---|---|
-| 0-10 | Browser: nandahack.media.mit.edu | "NandaHack Step 2 — a skill agents can use on their own. KaJota Mesh Escrow: on-chain USDC settlement, no keys required on the agent side." |
-| 10-25 | Editor: skill/SKILL.md | "The full contract fits in one Markdown file — service name, what it does, endpoints, an end-to-end recipe. Agents read this and act." |
-| 25-40 | Terminal: `SKILL_URL=<render-url> ./verify-skill.sh` — step 1 healthz | "Live health probe against the Render deploy — mode:live, chain:Sepolia, service wallet is the CosellEscrow releaseAuth." |
-| 40-55 | Terminal: quote + release output | "Agent asks for a quote in USD, gets USDC base units back. Then releases the deposit — this is a real Sepolia transaction." |
-| 55-75 | Browser: sepolia.etherscan.io/tx/... | "There's the transaction on Sepolia Etherscan. Real chain, real contract, real settlement — driven entirely from an HTTP call." |
-| 75-90 | Editor: agentfacts.json | "And the whole service is registered in the NANDA Index via AgentFacts, so any agent on the internet of agents can discover and call it." |
+| 0-10 | Browser: nandahack.media.mit.edu | "NandaHack Step 2. KaJota Mesh Escrow — real on-chain USDC settlement, agents drive the whole cycle from HTTP. No wallet keys required." |
+| 10-25 | Editor: skill/SKILL.md | "One SKILL.md. Eight endpoints. Create a wallet, lock funds, release or refund. Every step is a single HTTP call." |
+| 25-45 | Terminal: `SKILL_URL=<render-url> ./verify-skill.sh` — steps 3 + 4 (wallet create × 2) | "Watch the service provision two demo wallets, funded from treasury. This is where every other escrow service breaks — you'd normally have to bring your own key." |
+| 45-65 | Terminal: step 5 (lock) + Etherscan transaction | "Now the buyer wallet locks $42.50 USDC into escrow. The service signs approve + deposit, both real transactions on Sepolia. Here's the deposit ID from the on-chain event." |
+| 65-80 | Terminal: step 6 (release) + Etherscan | "Release. USDC leaves the escrow contract, lands in the seller wallet. This is Sepolia Etherscan — real chain, real settlement, all driven from three HTTP calls." |
+| 80-90 | Editor: agentfacts.json served at /agentfacts.json | "Discoverable via the MIT NANDA Index. Any agent on the internet of agents finds this and completes an escrow using only the SKILL.md." |
 
-Words on-screen: `KaJota Mesh Escrow · SKILL.md · Sepolia · No keys required`.
+Words on-screen: `KaJota Mesh Escrow · One SKILL.md · Sepolia settlement · Zero keys held by the agent`.
 
 ---
 

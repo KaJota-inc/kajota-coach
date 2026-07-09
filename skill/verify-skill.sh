@@ -36,11 +36,31 @@ call GET /healthz | jq .
 step "2. Escrow quote — convert USD to USDC base units"
 call POST /escrow/quote '{"amount_usd": 42.5}' | jq .
 
-step "3. Escrow release — settle a deposit to the seller (dry-run: synthetic tx)"
-call POST /escrow/release "{\"deposit_id\": \"${DEPOSIT_ID}\"}" | jq .
+step "3. Create buyer wallet (server-signed managed demo wallet)"
+BUYER_JSON=$(call POST /wallet/create '{"label": "buyer"}')
+echo "$BUYER_JSON" | jq .
+BUYER_ID=$(echo "$BUYER_JSON" | jq -r .wallet_id)
 
-step "4. Escrow deposit lookup — read on-chain state for a deposit id"
-call GET "/escrow/deposit/${DEPOSIT_ID}" 2>/dev/null | jq . \
-  || echo "(404 expected in dry-run — chain not queried)"
+step "4. Create seller wallet"
+SELLER_JSON=$(call POST /wallet/create '{"label": "seller"}')
+echo "$SELLER_JSON" | jq .
 
-printf "\n\033[1;32mAll steps succeeded against %s\033[0m\n" "${SKILL_URL}"
+step "5. Lock \$42.50 USDC into escrow — approve + deposit, both signed server-side"
+LOCK_JSON=$(call POST /escrow/lock "$(cat <<EOF
+{
+  "buyer_wallet_id": "${BUYER_ID}",
+  "listing_id": "0xabababababababababababababababababababababababababababababababab",
+  "gross_amount_units": 42500000
+}
+EOF
+)")
+echo "$LOCK_JSON" | jq .
+DEP_ID=$(echo "$LOCK_JSON" | jq -r .deposit_id)
+
+step "6. Release escrow to seller — settles on Sepolia via releaseAuth key"
+call POST /escrow/release "{\"deposit_id\": \"${DEP_ID}\"}" | jq .
+
+step "7. Wallet balance (post-lock; USDC now in escrow, not in wallet)"
+call GET "/wallet/${BUYER_ID}" | jq .
+
+printf "\n\033[1;32mFull escrow cycle succeeded against %s (create → lock → release, all HTTP)\033[0m\n" "${SKILL_URL}"

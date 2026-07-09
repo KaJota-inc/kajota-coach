@@ -1,132 +1,110 @@
-# KaJota Mesh Escrow — SKILL.md
+# KaJota Mesh Escrow
 
-> On-chain USDC escrow for AI agents. Lock funds against a listing, release on
-> proof of delivery, or refund — all on Ethereum Sepolia, no wallet keys
-> required on the calling agent's side.
+On-chain USDC escrow for AI agents on Ethereum Sepolia. Create a demo wallet, lock funds against a listing, release on proof of delivery, or refund — every step is a single HTTP call. Agents do not hold or sign keys.
 
-This file is what a calling agent reads to use the service end-to-end. No
-other documentation, no human walkthrough. If the agent can follow this
-SKILL.md and complete an escrow lifecycle, the service has done its job.
+Base URL: `https://kajota-mesh-skill.onrender.com`
 
----
-
-## What this service does
-
-- **`/escrow/quote`** — convert a USD amount into USDC base units (informational).
-- **`/escrow/deposit/{id}`** — read on-chain state for an existing escrow.
-- **`/escrow/release`** — release escrowed USDC to the seller.
-- **`/escrow/refund`** — refund escrowed USDC to the buyer.
-- **`/healthz`** — service + chain liveness probe.
-
-## What this service does NOT do
-
-- It does not custody arbitrary wallets. The service holds a single
-  *release-authority* key for the deployed escrow; the lock side requires
-  the buyer to deposit directly on-chain (see "Locking funds" below).
-- It does not advise on whether to release or refund. It executes; the
-  decision lives in the calling agent.
-
-## Authentication
-
-The skill is currently **open** for the hackathon. Future versions will
-gate `release` and `refund` behind a HMAC-signed request header.
-
-## Stack
-
-| Layer | Value |
-|---|---|
-| Chain | Ethereum Sepolia (chainId `11155111`) |
-| USDC | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` (6 decimals) |
-| `CosellRegistry` | `0xfce6bd68d8d6f858d447f537d206c1e354b44315` |
-| `CosellEscrow` | `0x599869cef2e4c52e2c9074caaf8f9fb0cb191776` |
-| Explorer | https://sepolia.etherscan.io |
+Free tier: the first request after ~15 minutes idle can take 30–60 seconds while the service wakes up. Retry once.
 
 ---
 
 ## Endpoints
 
 ### `GET /healthz`
+Liveness + chain probe.
 
-Probe service + chain. No body.
-
+Example:
 ```bash
-curl -s https://<host>/healthz | jq
-```
-
-```json
-{
-  "ok": true,
-  "mode": "live",
-  "service_address": "0xe10cff27c99074cd44c64bed1b000226442524a4",
-  "chain_id": 11155111,
-  "extra": { "block_number": 9123456, "escrow": "0x5998...91776", "registry": "0xfce6...44315" }
-}
-```
-
-`mode` is `"live"` when the service holds a funded key, `"dry_run"` when it
-returns synthetic tx hashes (useful for local development).
-
----
-
-### `POST /escrow/quote`
-
-Convert human-readable USD to USDC base units. Pure compute — no chain call.
-
-Request:
-```json
-{ "amount_usd": 42.50 }
+curl -s https://kajota-mesh-skill.onrender.com/healthz
 ```
 
 Response:
 ```json
-{
-  "gross_amount_units": 42500000,
-  "fee_amount_units": 0,
-  "net_amount_units": 42500000,
-  "currency": "USDC"
-}
+{"ok": true, "mode": "live", "service_address": "0xe10cff27c99074cd44c64bed1b000226442524a4", "chain_id": 11155111, "extra": {"block_number": 6412809, "escrow": "0x599869cef2e4c52e2c9074caaf8f9fb0cb191776", "registry": "0xfce6bd68d8d6f858d447f537d206c1e354b44315"}}
+```
+
+`mode` is `"live"` when the service is on Sepolia, `"dry_run"` when it returns synthetic tx hashes.
+
+---
+
+### `POST /wallet/create`
+Create a fresh managed demo wallet. Server holds the private key; you get an opaque `wallet_id` to pass into `/escrow/lock`. In live mode the service transfers a small ETH grant (gas) and USDC grant from its treasury so the wallet is immediately usable.
+
+Body: `{"label": "buyer"}` — optional label, purely for your own records.
+
+Example:
+```bash
+curl -s -X POST https://kajota-mesh-skill.onrender.com/wallet/create -H content-type:application/json -d '{"label":"buyer"}'
+```
+
+Response:
+```json
+{"wallet_id": "w-ee5dd45d121e", "address": "0x80C62f79EB33319d15F274477416c2B605A940d1", "note": "Demo wallet — service holds the key. Do not send real funds."}
 ```
 
 ---
 
-### Locking funds
+### `GET /wallet/{wallet_id}`
+Read ETH and USDC balances for a managed wallet.
 
-Locking deposits USDC from the **buyer's** wallet directly into the
-`CosellEscrow` contract on-chain. This SKILL.md service does not custody
-buyer wallets; the buyer-side agent must:
+Example:
+```bash
+curl -s https://kajota-mesh-skill.onrender.com/wallet/w-ee5dd45d121e
+```
 
-1. Have a wallet with Sepolia USDC and ETH (for gas).
-2. Approve `CosellEscrow` to spend USDC: `USDC.approve(escrow, grossAmountUnits)`.
-3. Call `CosellEscrow.deposit(listingId, grossAmountUnits)` from that wallet.
+Response:
+```json
+{"wallet_id": "w-ee5dd45d121e", "address": "0x80C62f79EB33319d15F274477416c2B605A940d1", "eth_wei": 10000000000000000, "usdc_units": 100000000, "currency": "USDC"}
+```
 
-The `Deposited` event emits a `depositId` the agent should retain — pass
-it back to this SKILL via `/escrow/release` or `/escrow/refund`.
+---
 
-A reference implementation in TypeScript+viem lives at
-[`apps/mobile` in this repo](../src/services/escrow); a Python+web3.py
-helper is in [`mesh.py`](./kajota_mesh_skill/mesh.py).
+### `POST /escrow/quote`
+Convert a human-readable USD amount to USDC base units (6 decimals). Pure compute, no chain call.
+
+Example:
+```bash
+curl -s -X POST https://kajota-mesh-skill.onrender.com/escrow/quote -H content-type:application/json -d '{"amount_usd": 42.50}'
+```
+
+Response:
+```json
+{"gross_amount_units": 42500000, "fee_amount_units": 0, "net_amount_units": 42500000, "currency": "USDC"}
+```
+
+---
+
+### `POST /escrow/lock`
+Server-signed deposit into the on-chain escrow. Does the two transactions the buyer would otherwise sign themselves — `USDC.approve(escrow, amount)` then `CosellEscrow.deposit(listingId, amount)` — and returns the `deposit_id` parsed from the `Deposited` event. Pass this id to `/escrow/release` or `/escrow/refund`.
+
+Body:
+```json
+{"buyer_wallet_id": "w-ee5dd45d121e", "listing_id": "0xabababababababababababababababababababababababababababababababab", "gross_amount_units": 42500000}
+```
+
+Example:
+```bash
+curl -s -X POST https://kajota-mesh-skill.onrender.com/escrow/lock -H content-type:application/json -d '{"buyer_wallet_id":"w-ee5dd45d121e","listing_id":"0xabababababababababababababababababababababababababababababababab","gross_amount_units":42500000}'
+```
+
+Response:
+```json
+{"deposit_id": "0xc57c485c6f357f6a1816a20e50ffc44ec4a690b3f7884cdbbc82df632e11d800", "tx_hash": "0x1a9b...c30f", "explorer_url": "https://sepolia.etherscan.io/tx/0x1a9b...c30f", "listing_id": "0xabab...abab", "buyer_address": "0x80C6...40d1", "gross_amount_units": 42500000}
+```
 
 ---
 
 ### `GET /escrow/deposit/{deposit_id}`
+Read on-chain state of a deposit.
 
-Read on-chain state for a deposit.
-
+Example:
 ```bash
-curl -s https://<host>/escrow/deposit/0xabcd...1234 | jq
+curl -s https://kajota-mesh-skill.onrender.com/escrow/deposit/0xc57c485c6f357f6a1816a20e50ffc44ec4a690b3f7884cdbbc82df632e11d800
 ```
 
+Response:
 ```json
-{
-  "deposit_id": "0xabcd...1234",
-  "listing_id": "0x1111...2222",
-  "buyer": "0xb000...",
-  "seller": "0xa000...",
-  "gross_amount_units": 42500000,
-  "fee_amount_units": 0,
-  "net_amount_units": 42500000,
-  "status": "pending"
-}
+{"deposit_id": "0xc57c...d800", "listing_id": "0xabab...abab", "buyer": "0x80C6...40d1", "seller": "0x0000...0000", "gross_amount_units": 42500000, "fee_amount_units": 0, "net_amount_units": 42500000, "status": "pending"}
 ```
 
 `status` is `"pending"`, `"released"`, or `"refunded"`.
@@ -134,69 +112,61 @@ curl -s https://<host>/escrow/deposit/0xabcd...1234 | jq
 ---
 
 ### `POST /escrow/release`
+Release the escrowed USDC to the seller. Authorised by the service wallet (matches `releaseAuth` on the deployed escrow). Call this once delivery is verified off-chain.
 
-Release escrowed USDC to the seller. Authorised by the service wallet
-(matches `releaseAuth` on the deployed escrow). Agents call this once
-they have verified delivery off-chain.
+Body: `{"deposit_id": "0xc57c...d800"}`
 
-Request:
-```json
-{ "deposit_id": "0xabcd...1234" }
+Example:
+```bash
+curl -s -X POST https://kajota-mesh-skill.onrender.com/escrow/release -H content-type:application/json -d '{"deposit_id":"0xc57c485c6f357f6a1816a20e50ffc44ec4a690b3f7884cdbbc82df632e11d800"}'
 ```
 
 Response:
 ```json
-{
-  "deposit_id": "0xabcd...1234",
-  "action": "release",
-  "tx_hash": "0x9999...",
-  "explorer_url": "https://sepolia.etherscan.io/tx/0x9999..."
-}
+{"deposit_id": "0xc57c...d800", "action": "release", "tx_hash": "0x9f8a...4b21", "explorer_url": "https://sepolia.etherscan.io/tx/0x9f8a...4b21"}
 ```
 
 ---
 
 ### `POST /escrow/refund`
+Refund the escrowed USDC to the buyer. Same shape as `/escrow/release`. Use when delivery did not occur.
 
-Refund escrowed USDC to the buyer. Authorised by the service wallet.
-Use when delivery did not occur or both parties agree to cancel.
+Example:
+```bash
+curl -s -X POST https://kajota-mesh-skill.onrender.com/escrow/refund -H content-type:application/json -d '{"deposit_id":"0xc57c485c6f357f6a1816a20e50ffc44ec4a690b3f7884cdbbc82df632e11d800"}'
+```
 
-Same request / response shape as `/escrow/release`.
-
----
-
-## End-to-end agent recipe
-
-Pseudo-code an agent can follow using *only* this SKILL.md:
-
-```python
-# 1. Buyer side: deposit on-chain (signed by buyer's own wallet).
-#    Resulting depositId comes from the Deposited event.
-deposit_id = call_contract(
-    CosellEscrow, "deposit", listing_id, gross_amount_units
-)  # buyer's wallet signs
-
-# 2. Off-chain: seller delivers; buyer-agent verifies.
-
-# 3. Buyer agent (or release authority) hits the SKILL service:
-resp = requests.post(f"{SKILL_URL}/escrow/release", json={"deposit_id": deposit_id})
-print(resp.json()["explorer_url"])
-
-# 4. Check final state:
-state = requests.get(f"{SKILL_URL}/escrow/deposit/{deposit_id}").json()
-assert state["status"] == "released"
+Response:
+```json
+{"deposit_id": "0xc57c...d800", "action": "refund", "tx_hash": "0x77e1...58a3", "explorer_url": "https://sepolia.etherscan.io/tx/0x77e1...58a3"}
 ```
 
 ---
 
-## NANDA Index registration
+## How an agent uses this service
 
-This service is discoverable via the MIT NANDA Index. Its AgentFacts
-record lives alongside this file at [`agentfacts.json`](./agentfacts.json).
+1. Call `POST /wallet/create` to get a buyer `wallet_id`. The service funds it with USDC + gas.
+2. Call `POST /escrow/quote` with the USD price to learn the exact `gross_amount_units`.
+3. Call `POST /escrow/lock` with `buyer_wallet_id`, `listing_id` (any 0x-prefixed 32-byte hex you generate), and `gross_amount_units`. Save the returned `deposit_id`.
+4. Verify off-chain that the seller has delivered (this step depends on the agent's own logic and is out of scope for this skill).
+5. On success, call `POST /escrow/release` with the `deposit_id`. The service settles to the seller on-chain.
+6. On failure or cancellation, call `POST /escrow/refund` with the same `deposit_id`. The service returns funds to the buyer wallet.
+7. At any point, call `GET /escrow/deposit/{deposit_id}` to read the on-chain state (`pending` / `released` / `refunded`).
+
+Every step is one HTTP call. No wallet keys leave the service.
 
 ---
 
-## Source
+## Stack
 
-GitHub: https://github.com/KaJota-inc/kajota-coach (branch
-`hackathon/nanda-mesh-skill`, dir `skill/`).
+| Layer | Value |
+|---|---|
+| Chain | Ethereum Sepolia (chainId `11155111`) |
+| USDC | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` |
+| `CosellRegistry` | `0xfce6bd68d8d6f858d447f537d206c1e354b44315` |
+| `CosellEscrow` | `0x599869cef2e4c52e2c9074caaf8f9fb0cb191776` |
+| Explorer | https://sepolia.etherscan.io |
+
+Discoverable via the MIT NANDA Index: `agentfacts.json` served at `/agentfacts.json`.
+
+Source: https://github.com/KaJota-inc/kajota-coach/tree/hackathon/nanda-mesh-skill/skill.

@@ -80,6 +80,55 @@ class ActionResponse(BaseModel):
     explorer_url: str
 
 
+class CreateWalletRequest(BaseModel):
+    label: str | None = Field(
+        default=None,
+        description="Optional human-readable label such as 'buyer' or 'seller-01'.",
+    )
+
+
+class WalletResponse(BaseModel):
+    wallet_id: str = Field(description="Opaque identifier — pass this to /escrow/lock.")
+    address: str = Field(description="On-chain address of the managed wallet.")
+    note: str = Field(
+        default="Demo wallet — service holds the key. Do not send real funds.",
+    )
+
+
+class WalletBalanceResponse(BaseModel):
+    wallet_id: str
+    address: str
+    eth_wei: int
+    usdc_units: int
+    currency: str = "USDC"
+
+
+class LockRequest(BaseModel):
+    buyer_wallet_id: str = Field(
+        description="Wallet id returned by /wallet/create; funds the escrow deposit."
+    )
+    listing_id: str = Field(
+        description="Any 0x-prefixed hex string (right-padded to 32 bytes) identifying "
+        "the listing being paid for.  Reused as-is on-chain."
+    )
+    gross_amount_units: int = Field(
+        gt=0,
+        description="USDC base units (6 decimals) to lock in escrow.",
+    )
+
+
+class LockResponse(BaseModel):
+    deposit_id: str = Field(
+        description="The on-chain deposit id — the exact string to pass to "
+        "/escrow/release or /escrow/refund."
+    )
+    tx_hash: str
+    explorer_url: str
+    listing_id: str
+    buyer_address: str
+    gross_amount_units: int
+
+
 def _explorer_url_for_tx(tx_hash: str, chain_id: int) -> str:
     if chain_id == 11155111:
         return f"https://sepolia.etherscan.io/tx/{tx_hash}"
@@ -176,6 +225,74 @@ def refund(
         action="refund",
         tx_hash=tx_hash,
         explorer_url=_explorer_url_for_tx(tx_hash, _settings.chain_id),
+    )
+
+
+@app.post("/wallet/create", response_model=WalletResponse, tags=["wallet"])
+def wallet_create(
+    body: CreateWalletRequest,
+    client: Annotated[MeshClient, Depends(get_client)],
+) -> WalletResponse:
+    """Create a fresh managed demo wallet, funded from the service treasury.
+
+    In live mode the wallet gets a small ETH grant (for gas) and a USDC
+    grant (so it can immediately take part in an escrow).  In dry-run
+    the wallet is synthetic and un-funded.
+
+    **Not for production custody.**  The service holds the private key
+    server-side so calling agents can drive the entire escrow lifecycle
+    from HTTP alone — this is the point of "agents succeed using only
+    your SKILL.md."
+    """
+    wallet = client.create_managed_wallet(body.label)
+    return WalletResponse(wallet_id=wallet.wallet_id, address=wallet.address)
+
+
+@app.get("/wallet/{wallet_id}", response_model=WalletBalanceResponse, tags=["wallet"])
+def wallet_balance(
+    wallet_id: str,
+    client: Annotated[MeshClient, Depends(get_client)],
+) -> WalletBalanceResponse:
+    """Return the ETH + USDC balance for a managed wallet."""
+    balance = client.wallet_balance(wallet_id)
+    if balance is None:
+        raise HTTPException(404, f"wallet {wallet_id} not found")
+    return WalletBalanceResponse(
+        wallet_id=wallet_id,
+        address=balance.address,
+        eth_wei=balance.eth_wei,
+        usdc_units=balance.usdc_units,
+    )
+
+
+@app.post("/escrow/lock", response_model=LockResponse, tags=["escrow"])
+def escrow_lock(
+    body: LockRequest,
+    client: Annotated[MeshClient, Depends(get_client)],
+) -> LockResponse:
+    """Server-signed deposit from a managed buyer wallet.
+
+    Does the two on-chain transactions the buyer would normally have to
+    do themselves — ``USDC.approve(escrow, amount)`` then
+    ``CosellEscrow.deposit(listingId, amount)`` — and returns the
+    ``deposit_id`` parsed from the ``Deposited`` event so the caller
+    can hand it back to ``/escrow/release`` or ``/escrow/refund``.
+    """
+    try:
+        result = client.lock_from_wallet(
+            buyer_wallet_id=body.buyer_wallet_id,
+            listing_id=body.listing_id,
+            gross_amount_units=body.gross_amount_units,
+        )
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    return LockResponse(
+        deposit_id=result.deposit_id,
+        tx_hash=result.tx_hash,
+        explorer_url=_explorer_url_for_tx(result.tx_hash, _settings.chain_id),
+        listing_id=result.listing_id,
+        buyer_address=result.buyer_address,
+        gross_amount_units=result.gross_amount_units,
     )
 
 

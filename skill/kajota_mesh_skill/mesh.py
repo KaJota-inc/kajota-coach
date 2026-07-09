@@ -3,15 +3,48 @@
 from __future__ import annotations
 
 import json
+import secrets
+import uuid
 from dataclasses import dataclass
-from importlib import resources
 from pathlib import Path
 from typing import Any
 
+from eth_account import Account
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware
 
 from kajota_mesh_skill.settings import Settings
+
+# Minimal ERC-20 ABI — enough for balanceOf, approve, transfer against USDC.
+_ERC20_ABI: list[dict[str, Any]] = [
+    {
+        "name": "balanceOf",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [{"name": "owner", "type": "address"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+    },
+    {
+        "name": "approve",
+        "type": "function",
+        "stateMutability": "nonpayable",
+        "inputs": [
+            {"name": "spender", "type": "address"},
+            {"name": "amount", "type": "uint256"},
+        ],
+        "outputs": [{"name": "", "type": "bool"}],
+    },
+    {
+        "name": "transfer",
+        "type": "function",
+        "stateMutability": "nonpayable",
+        "inputs": [
+            {"name": "to", "type": "address"},
+            {"name": "amount", "type": "uint256"},
+        ],
+        "outputs": [{"name": "", "type": "bool"}],
+    },
+]
 
 
 def _load_abi(name: str) -> list[dict[str, Any]]:
@@ -39,6 +72,35 @@ class DepositView:
 _STATUS_BY_INDEX = {0: "pending", 1: "released", 2: "refunded"}
 
 
+@dataclass
+class ManagedWallet:
+    """A demo wallet the service holds keys for.  Not for production."""
+
+    wallet_id: str
+    address: str
+    private_key: str
+
+
+@dataclass
+class WalletBalance:
+    """ETH + USDC balances of a managed wallet."""
+
+    address: str
+    eth_wei: int
+    usdc_units: int
+
+
+@dataclass
+class LockResult:
+    """Outcome of a managed-wallet-driven ``deposit`` call on the escrow."""
+
+    deposit_id: str
+    tx_hash: str
+    listing_id: str
+    buyer_address: str
+    gross_amount_units: int
+
+
 class MeshClient:
     """Thin wrapper exposing only the operations the skill service needs."""
 
@@ -47,7 +109,13 @@ class MeshClient:
         self._w3: Web3 | None = None
         self._escrow: Any = None
         self._registry: Any = None
+        self._usdc: Any = None
         self._account: Any = None
+        self._treasury: Any = None
+        # In-memory throwaway store of demo wallets keyed by wallet_id.
+        # Not persisted — restart of the service loses them.  Judges know:
+        # demo mode, not custody-of-user-funds.
+        self._wallets: dict[str, ManagedWallet] = {}
         if settings.is_live:
             self._connect()
 
@@ -56,6 +124,7 @@ class MeshClient:
         w3 = Web3(Web3.HTTPProvider(s.rpc_url))
         w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
         self._account = w3.eth.account.from_key(s.release_auth_key)
+        self._treasury = w3.eth.account.from_key(s.effective_treasury_key)
         w3.eth.default_account = self._account.address
         self._escrow = w3.eth.contract(
             address=Web3.to_checksum_address(s.escrow_address),
@@ -64,6 +133,10 @@ class MeshClient:
         self._registry = w3.eth.contract(
             address=Web3.to_checksum_address(s.registry_address),
             abi=_load_abi("CosellRegistry"),
+        )
+        self._usdc = w3.eth.contract(
+            address=Web3.to_checksum_address(s.usdc_address),
+            abi=_ERC20_ABI,
         )
         self._w3 = w3
 
@@ -132,6 +205,159 @@ class MeshClient:
         signed = self._account.sign_transaction(tx)
         tx_hash = self._w3.eth.send_raw_transaction(signed.raw_transaction)
         return tx_hash.hex()
+
+    # ------------------------------------------------------------------
+    # Managed demo wallets
+    # ------------------------------------------------------------------
+
+    def create_managed_wallet(self, label: str | None = None) -> ManagedWallet:
+        """Create a fresh demo wallet and (when live) fund it from treasury.
+
+        In dry-run: returns a synthetic wallet without touching chain.
+        In live: (1) generates a new keypair, (2) sends an ETH grant for
+        gas, (3) transfers a USDC grant so the wallet can immediately
+        take part in an escrow.  Both transfers use the treasury key.
+        """
+        wallet_id = f"w-{uuid.uuid4().hex[:12]}"
+        if not self.live:
+            fake_addr = "0x" + secrets.token_hex(20)
+            wallet = ManagedWallet(
+                wallet_id=wallet_id,
+                address=Web3.to_checksum_address(fake_addr),
+                private_key="0xdry-run-no-key",
+            )
+            self._wallets[wallet_id] = wallet
+            return wallet
+
+        acct = Account.create(extra_entropy=secrets.token_bytes(32))
+        wallet = ManagedWallet(
+            wallet_id=wallet_id,
+            address=acct.address,
+            private_key=acct.key.hex(),
+        )
+        self._wallets[wallet_id] = wallet
+        self._fund_wallet(wallet)
+        return wallet
+
+    def _fund_wallet(self, wallet: ManagedWallet) -> None:
+        """Transfer ETH + USDC from treasury to a fresh managed wallet."""
+        s = self._settings
+        # 1. Native ETH grant for gas.
+        eth_tx = {
+            "from": self._treasury.address,
+            "to": wallet.address,
+            "value": s.wallet_eth_grant_wei,
+            "nonce": self._w3.eth.get_transaction_count(self._treasury.address),
+            "gas": 21_000,
+            "gasPrice": self._w3.eth.gas_price,
+            "chainId": s.chain_id,
+        }
+        eth_signed = self._treasury.sign_transaction(eth_tx)
+        self._w3.eth.send_raw_transaction(eth_signed.raw_transaction)
+        # 2. USDC grant via ERC-20 transfer.
+        usdc_tx = self._usdc.functions.transfer(
+            wallet.address, s.wallet_usdc_grant_units
+        ).build_transaction(
+            {
+                "from": self._treasury.address,
+                "nonce": self._w3.eth.get_transaction_count(self._treasury.address),
+                "chainId": s.chain_id,
+            }
+        )
+        usdc_signed = self._treasury.sign_transaction(usdc_tx)
+        self._w3.eth.send_raw_transaction(usdc_signed.raw_transaction)
+
+    def get_wallet(self, wallet_id: str) -> ManagedWallet | None:
+        return self._wallets.get(wallet_id)
+
+    def wallet_balance(self, wallet_id: str) -> WalletBalance | None:
+        w = self._wallets.get(wallet_id)
+        if w is None:
+            return None
+        if not self.live:
+            return WalletBalance(address=w.address, eth_wei=0, usdc_units=0)
+        eth = int(self._w3.eth.get_balance(w.address))
+        usdc = int(self._usdc.functions.balanceOf(w.address).call())
+        return WalletBalance(address=w.address, eth_wei=eth, usdc_units=usdc)
+
+    # ------------------------------------------------------------------
+    # Managed-wallet lock — the missing link that keeps the whole flow
+    # inside the SKILL.md-only surface.
+    # ------------------------------------------------------------------
+
+    def lock_from_wallet(
+        self, buyer_wallet_id: str, listing_id: str, gross_amount_units: int
+    ) -> LockResult:
+        """Approve USDC and call ``deposit`` from a managed buyer wallet.
+
+        Returns the ``deposit_id`` parsed from the Deposited event of the
+        deposit transaction, so the caller can use it against
+        ``/escrow/release`` or ``/escrow/refund`` immediately.
+
+        Dry-run returns synthetic ids so the demo runs without chain.
+        """
+        buyer = self._wallets.get(buyer_wallet_id)
+        if buyer is None:
+            raise KeyError(f"wallet {buyer_wallet_id!r} not found")
+
+        listing_bytes = bytes.fromhex(listing_id.removeprefix("0x").rjust(64, "0"))
+
+        if not self.live:
+            fake_deposit = "0xdep" + secrets.token_hex(29)
+            return LockResult(
+                deposit_id=fake_deposit,
+                tx_hash=f"0xdry-lock-{buyer_wallet_id[:12]}",
+                listing_id="0x" + listing_bytes.hex(),
+                buyer_address=buyer.address,
+                gross_amount_units=gross_amount_units,
+            )
+
+        s = self._settings
+        buyer_acct = self._w3.eth.account.from_key(buyer.private_key)
+
+        # 1. approve USDC → escrow for gross_amount_units
+        approve_tx = self._usdc.functions.approve(
+            self._settings.escrow_address, gross_amount_units
+        ).build_transaction(
+            {
+                "from": buyer_acct.address,
+                "nonce": self._w3.eth.get_transaction_count(buyer_acct.address),
+                "chainId": s.chain_id,
+            }
+        )
+        approve_signed = buyer_acct.sign_transaction(approve_tx)
+        approve_hash = self._w3.eth.send_raw_transaction(approve_signed.raw_transaction)
+        self._w3.eth.wait_for_transaction_receipt(approve_hash, timeout=180)
+
+        # 2. deposit(listingId, grossAmount) from the buyer wallet
+        deposit_tx = self._escrow.functions.deposit(
+            listing_bytes, gross_amount_units
+        ).build_transaction(
+            {
+                "from": buyer_acct.address,
+                "nonce": self._w3.eth.get_transaction_count(buyer_acct.address),
+                "chainId": s.chain_id,
+            }
+        )
+        deposit_signed = buyer_acct.sign_transaction(deposit_tx)
+        deposit_hash = self._w3.eth.send_raw_transaction(deposit_signed.raw_transaction)
+        receipt = self._w3.eth.wait_for_transaction_receipt(deposit_hash, timeout=180)
+
+        # Parse the Deposited event out of the receipt to get depositId.
+        events = self._escrow.events.Deposited().process_receipt(receipt)
+        if not events:
+            raise RuntimeError(
+                "deposit tx succeeded but Deposited event was not emitted — check ABI"
+            )
+        deposit_id_bytes: bytes = events[0]["args"]["depositId"]
+
+        return LockResult(
+            deposit_id="0x" + deposit_id_bytes.hex(),
+            tx_hash=deposit_hash.hex(),
+            listing_id="0x" + listing_bytes.hex(),
+            buyer_address=buyer_acct.address,
+            gross_amount_units=gross_amount_units,
+        )
 
     def chain_status(self) -> dict[str, Any]:
         """Quick health report for the ``/healthz`` endpoint."""
