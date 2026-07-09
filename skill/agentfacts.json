@@ -80,6 +80,22 @@
       "languages": ["en"],
       "input_modes": ["text"],
       "output_modes": ["text"]
+    },
+    {
+      "id": "escrow.dispute.file",
+      "label": "File off-chain dispute",
+      "description": "Pause release for a deposit and emit a witness hash a mediator agent can sign to authorise resolution. On-chain settlement + off-chain mediation, without a contract change.",
+      "languages": ["en"],
+      "input_modes": ["text"],
+      "output_modes": ["text"]
+    },
+    {
+      "id": "escrow.dispute.read",
+      "label": "Read dispute record",
+      "description": "Look up the dispute state for a deposit.",
+      "languages": ["en"],
+      "input_modes": ["text"],
+      "output_modes": ["text"]
     }
   ],
   "stack": {

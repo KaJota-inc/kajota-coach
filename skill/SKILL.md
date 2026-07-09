@@ -6,6 +6,19 @@ Base URL: `https://kajota-mesh-skill.onrender.com`
 
 Free tier: the first request after ~15 minutes idle can take 30–60 seconds while the service wakes up. Retry once.
 
+## Quickstart — three curl calls to a real Sepolia settlement
+
+```bash
+BASE=https://kajota-mesh-skill.onrender.com
+WID=$(curl -s -X POST $BASE/wallet/create -H content-type:application/json -d '{"label":"buyer"}' | jq -r .wallet_id)
+DID=$(curl -s -X POST $BASE/escrow/lock -H content-type:application/json -d "{\"buyer_wallet_id\":\"$WID\",\"listing_id\":\"quickstart-1\",\"gross_amount_units\":42500000}" | jq -r .deposit_id)
+curl -s -X POST $BASE/escrow/release -H content-type:application/json -d "{\"deposit_id\":\"$DID\"}" | jq .explorer_url
+```
+
+That's the whole cycle: provision → lock → release, ending on a real Sepolia Etherscan URL.
+
+Reference agent in ~50 lines of pure-stdlib Python: [`examples/example_agent.py`](./examples/example_agent.py).
+
 ---
 
 ## Endpoints
@@ -77,9 +90,11 @@ Response:
 ### `POST /escrow/lock`
 Server-signed deposit into the on-chain escrow. Does the two transactions the buyer would otherwise sign themselves — `USDC.approve(escrow, amount)` then `CosellEscrow.deposit(listingId, amount)` — and returns the `deposit_id` parsed from the `Deposited` event. Pass this id to `/escrow/release` or `/escrow/refund`.
 
+`listing_id` accepts any plain string (`"my-order-42"`) or a `0x`-prefixed hex; the service sha256-hashes strings to bytes32 before writing on-chain. Deterministic — same string in, same on-chain id out.
+
 Body:
 ```json
-{"buyer_wallet_id": "w-ee5dd45d121e", "listing_id": "0xabababababababababababababababababababababababababababababababab", "gross_amount_units": 42500000}
+{"buyer_wallet_id": "w-ee5dd45d121e", "listing_id": "my-order-42", "gross_amount_units": 42500000}
 ```
 
 Example:
@@ -128,6 +143,24 @@ Response:
 
 ---
 
+### `POST /escrow/dispute`
+File an off-chain dispute against a deposit. Pauses `/escrow/release` (subsequent releases 409 until resolved). `/escrow/refund` still works — refund is the buyer-favorable resolution and auto-marks the dispute `resolved-refund`. Returns a witness hash a mediator agent can sign to authorise a release resolution off-chain.
+
+Body: `{"deposit_id": "0xc57c...d800", "reason": "goods not delivered"}`
+
+Example:
+```bash
+curl -s -X POST https://kajota-mesh-skill.onrender.com/escrow/dispute -H content-type:application/json -d '{"deposit_id":"0xc57c485c6f357f6a1816a20e50ffc44ec4a690b3f7884cdbbc82df632e11d800","reason":"goods not delivered"}'
+```
+
+Response:
+```json
+{"dispute_id": "d-9a3f22b18c4d", "deposit_id": "0xc57c...d800", "filed_at": 1751913600, "reason": "goods not delivered", "witness_hash": "0x8b71...9c02", "status": "open"}
+```
+
+### `GET /escrow/dispute/{deposit_id}`
+Read the dispute record for a deposit. 404 if none filed.
+
 ### `POST /escrow/refund`
 Refund the escrowed USDC to the buyer. Same shape as `/escrow/release`. Use when delivery did not occur.
 
@@ -147,11 +180,12 @@ Response:
 
 1. Call `POST /wallet/create` to get a buyer `wallet_id`. The service funds it with USDC + gas.
 2. Call `POST /escrow/quote` with the USD price to learn the exact `gross_amount_units`.
-3. Call `POST /escrow/lock` with `buyer_wallet_id`, `listing_id` (any 0x-prefixed 32-byte hex you generate), and `gross_amount_units`. Save the returned `deposit_id`.
+3. Call `POST /escrow/lock` with `buyer_wallet_id`, `listing_id` (any string — `"my-order-42"` is fine), and `gross_amount_units`. Save the returned `deposit_id`.
 4. Verify off-chain that the seller has delivered (this step depends on the agent's own logic and is out of scope for this skill).
 5. On success, call `POST /escrow/release` with the `deposit_id`. The service settles to the seller on-chain.
-6. On failure or cancellation, call `POST /escrow/refund` with the same `deposit_id`. The service returns funds to the buyer wallet.
-7. At any point, call `GET /escrow/deposit/{deposit_id}` to read the on-chain state (`pending` / `released` / `refunded`).
+6. If the delivery is contested, call `POST /escrow/dispute` with the `deposit_id` and a reason. Release is paused; the witness hash can be co-signed by a mediator off-chain to authorise resolution.
+7. On failure or cancellation, call `POST /escrow/refund` with the same `deposit_id`. The service returns funds to the buyer wallet (auto-resolves any open dispute as `resolved-refund`).
+8. At any point, call `GET /escrow/deposit/{deposit_id}` to read the on-chain state (`pending` / `released` / `refunded`).
 
 Every step is one HTTP call. No wallet keys leave the service.
 

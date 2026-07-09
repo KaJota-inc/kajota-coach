@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import secrets
+import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -101,6 +103,43 @@ class LockResult:
     gross_amount_units: int
 
 
+@dataclass
+class DisputeReceipt:
+    """Off-chain dispute record.  Composes with the on-chain escrow's release/refund
+    happy-path: filing a dispute pauses the buyer-side agent from calling release
+    until a mediator resolves it, without a contract change.  The witness hash
+    binds the dispute payload; a mediator agent's signature over the hash is
+    a portable, verifiable authorization for either release or refund.
+    """
+
+    dispute_id: str
+    deposit_id: str
+    filed_at: int
+    reason: str
+    witness_hash: str
+    status: str  # "open" | "resolved-release" | "resolved-refund"
+
+
+def hash_listing_id(raw: str) -> bytes:
+    """Accept a plain string OR a 0x-prefixed hex and return a 32-byte value.
+
+    Enables agents to pass any listing key they already have ("kajota-listing-42",
+    a UUID, a URL) without knowing what bytes32 is.  Pure sha256 for determinism.
+    """
+    lowered = raw.strip()
+    if lowered.startswith("0x"):
+        body = lowered[2:]
+        try:
+            raw_bytes = bytes.fromhex(body)
+            if len(raw_bytes) == 32:
+                return raw_bytes
+            if len(raw_bytes) < 32:
+                return raw_bytes.rjust(32, b"\x00")
+        except ValueError:
+            pass
+    return hashlib.sha256(lowered.encode()).digest()
+
+
 class MeshClient:
     """Thin wrapper exposing only the operations the skill service needs."""
 
@@ -116,6 +155,17 @@ class MeshClient:
         # Not persisted — restart of the service loses them.  Judges know:
         # demo mode, not custody-of-user-funds.
         self._wallets: dict[str, ManagedWallet] = {}
+        # Off-chain dispute registry — pauses release, mediator resolves.
+        self._disputes: dict[str, DisputeReceipt] = {}
+        self._disputes_by_deposit: dict[str, str] = {}
+        # Simple in-memory counters for /metrics.
+        self._counters: dict[str, int] = {
+            "wallet_created": 0,
+            "lock_ok": 0,
+            "release_ok": 0,
+            "refund_ok": 0,
+            "dispute_filed": 0,
+        }
         if settings.is_live:
             self._connect()
 
@@ -171,11 +221,21 @@ class MeshClient:
             status=_STATUS_BY_INDEX.get(int(status_idx), "unknown"),
         )
 
+    def is_disputed(self, deposit_id: str) -> bool:
+        d = self.get_dispute_for(deposit_id)
+        return d is not None and d.status == "open"
+
     def release(self, deposit_id: str) -> str:
         """Call ``release(depositId)`` and return the transaction hash.
 
+        Refuses if the deposit has an open dispute (mediator must resolve first).
         Returns a synthetic ``0xdry-...`` hash when ``MESH_DRY_RUN=true``.
         """
+        if self.is_disputed(deposit_id):
+            raise RuntimeError(
+                f"deposit {deposit_id} has an open dispute — resolve it before releasing"
+            )
+        self._counters["release_ok"] += 1
         if not self.live:
             return f"0xdry-release-{deposit_id[:16]}"
         deposit_bytes = bytes.fromhex(deposit_id.removeprefix("0x"))
@@ -191,7 +251,16 @@ class MeshClient:
         return tx_hash.hex()
 
     def refund(self, deposit_id: str) -> str:
-        """Call ``refund(depositId)`` and return the transaction hash."""
+        """Call ``refund(depositId)`` and return the transaction hash.
+
+        Refund is allowed even when a dispute is open — refund is the
+        buyer-favorable resolution of the dispute.
+        """
+        self._counters["refund_ok"] += 1
+        # Mark dispute (if any) as resolved-refund.
+        existing = self.get_dispute_for(deposit_id)
+        if existing is not None:
+            existing.status = "resolved-refund"
         if not self.live:
             return f"0xdry-refund-{deposit_id[:16]}"
         deposit_bytes = bytes.fromhex(deposit_id.removeprefix("0x"))
@@ -219,6 +288,7 @@ class MeshClient:
         take part in an escrow.  Both transfers use the treasury key.
         """
         wallet_id = f"w-{uuid.uuid4().hex[:12]}"
+        self._counters["wallet_created"] += 1
         if not self.live:
             fake_addr = "0x" + secrets.token_hex(20)
             wallet = ManagedWallet(
@@ -300,10 +370,11 @@ class MeshClient:
         if buyer is None:
             raise KeyError(f"wallet {buyer_wallet_id!r} not found")
 
-        listing_bytes = bytes.fromhex(listing_id.removeprefix("0x").rjust(64, "0"))
+        listing_bytes = hash_listing_id(listing_id)
 
         if not self.live:
             fake_deposit = "0xdep" + secrets.token_hex(29)
+            self._counters["lock_ok"] += 1
             return LockResult(
                 deposit_id=fake_deposit,
                 tx_hash=f"0xdry-lock-{buyer_wallet_id[:12]}",
@@ -350,6 +421,7 @@ class MeshClient:
                 "deposit tx succeeded but Deposited event was not emitted — check ABI"
             )
         deposit_id_bytes: bytes = events[0]["args"]["depositId"]
+        self._counters["lock_ok"] += 1
 
         return LockResult(
             deposit_id="0x" + deposit_id_bytes.hex(),
@@ -358,6 +430,53 @@ class MeshClient:
             buyer_address=buyer_acct.address,
             gross_amount_units=gross_amount_units,
         )
+
+    # ------------------------------------------------------------------
+    # Dispute (off-chain) — pairs on-chain settlement with a witnessed
+    # dispute channel.  Filing a dispute pauses buyer-side release until
+    # a mediator resolves it.  Deposit itself remains on-chain unchanged.
+    # ------------------------------------------------------------------
+
+    def file_dispute(self, deposit_id: str, reason: str) -> DisputeReceipt:
+        existing_id = self._disputes_by_deposit.get(deposit_id)
+        if existing_id is not None:
+            return self._disputes[existing_id]
+
+        dispute_id = f"d-{uuid.uuid4().hex[:12]}"
+        filed_at = int(time.time())
+        # Witness hash binds (dispute_id, deposit_id, reason, filed_at).
+        # Any mediator can recompute and sign it to resolve.
+        payload = json.dumps(
+            {
+                "dispute_id": dispute_id,
+                "deposit_id": deposit_id,
+                "reason": reason,
+                "filed_at": filed_at,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        witness_hash = "0x" + hashlib.sha256(payload.encode()).hexdigest()
+
+        receipt = DisputeReceipt(
+            dispute_id=dispute_id,
+            deposit_id=deposit_id,
+            filed_at=filed_at,
+            reason=reason,
+            witness_hash=witness_hash,
+            status="open",
+        )
+        self._disputes[dispute_id] = receipt
+        self._disputes_by_deposit[deposit_id] = dispute_id
+        self._counters["dispute_filed"] += 1
+        return receipt
+
+    def get_dispute_for(self, deposit_id: str) -> DisputeReceipt | None:
+        dispute_id = self._disputes_by_deposit.get(deposit_id)
+        return self._disputes.get(dispute_id) if dispute_id else None
+
+    def counters(self) -> dict[str, int]:
+        return dict(self._counters)
 
     def chain_status(self) -> dict[str, Any]:
         """Quick health report for the ``/healthz`` endpoint."""

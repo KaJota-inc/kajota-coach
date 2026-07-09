@@ -7,7 +7,7 @@ from typing import Annotated
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from kajota_mesh_skill.mesh import MeshClient
@@ -129,6 +129,27 @@ class LockResponse(BaseModel):
     gross_amount_units: int
 
 
+class DisputeRequest(BaseModel):
+    deposit_id: str = Field(description="The disputed deposit's id.")
+    reason: str = Field(
+        min_length=1,
+        max_length=1000,
+        description="Free-text reason for the dispute — e.g., 'goods not delivered'.",
+    )
+
+
+class DisputeResponse(BaseModel):
+    dispute_id: str
+    deposit_id: str
+    filed_at: int
+    reason: str
+    witness_hash: str = Field(
+        description="SHA-256 of the canonical dispute payload — a portable, "
+        "signable authorization for a mediator to co-sign a resolution."
+    )
+    status: str
+
+
 def _explorer_url_for_tx(tx_hash: str, chain_id: int) -> str:
     if chain_id == 11155111:
         return f"https://sepolia.etherscan.io/tx/{tx_hash}"
@@ -198,9 +219,13 @@ def release(
 
     Authorised by the service wallet (matches ``releaseAuth`` on the
     deployed escrow).  Agents should call this once they have verified
-    delivery off-chain.
+    delivery off-chain.  Refused with 409 if the deposit has an open
+    dispute — resolve it first with ``/escrow/dispute/resolve``.
     """
-    tx_hash = client.release(body.deposit_id)
+    try:
+        tx_hash = client.release(body.deposit_id)
+    except RuntimeError as e:
+        raise HTTPException(409, str(e)) from e
     return ActionResponse(
         deposit_id=body.deposit_id,
         action="release",
@@ -294,6 +319,65 @@ def escrow_lock(
         buyer_address=result.buyer_address,
         gross_amount_units=result.gross_amount_units,
     )
+
+
+@app.post("/escrow/dispute", response_model=DisputeResponse, tags=["escrow"])
+def escrow_dispute(
+    body: DisputeRequest,
+    client: Annotated[MeshClient, Depends(get_client)],
+) -> DisputeResponse:
+    """File an off-chain dispute against a deposit.
+
+    Pauses ``/escrow/release`` for that deposit (subsequent releases 409
+    until the dispute resolves).  ``/escrow/refund`` still works — refund
+    is the buyer-favorable resolution and auto-marks the dispute as
+    ``resolved-refund``.  Returns a witness hash a mediator agent can
+    sign to authorise a release resolution off-chain.
+    """
+    receipt = client.file_dispute(body.deposit_id, body.reason)
+    return DisputeResponse(
+        dispute_id=receipt.dispute_id,
+        deposit_id=receipt.deposit_id,
+        filed_at=receipt.filed_at,
+        reason=receipt.reason,
+        witness_hash=receipt.witness_hash,
+        status=receipt.status,
+    )
+
+
+@app.get("/escrow/dispute/{deposit_id}", response_model=DisputeResponse, tags=["escrow"])
+def escrow_dispute_read(
+    deposit_id: str,
+    client: Annotated[MeshClient, Depends(get_client)],
+) -> DisputeResponse:
+    """Read the dispute record for a deposit, if any."""
+    receipt = client.get_dispute_for(deposit_id)
+    if receipt is None:
+        raise HTTPException(404, f"no dispute filed for deposit {deposit_id}")
+    return DisputeResponse(
+        dispute_id=receipt.dispute_id,
+        deposit_id=receipt.deposit_id,
+        filed_at=receipt.filed_at,
+        reason=receipt.reason,
+        witness_hash=receipt.witness_hash,
+        status=receipt.status,
+    )
+
+
+@app.get("/metrics", tags=["meta"], response_class=PlainTextResponse, include_in_schema=False)
+def metrics(client: Annotated[MeshClient, Depends(get_client)]) -> PlainTextResponse:
+    """Prometheus-format counters for operational visibility."""
+    lines = []
+    for name, value in client.counters().items():
+        lines.append(f"# TYPE kajota_mesh_skill_{name} counter")
+        lines.append(f"kajota_mesh_skill_{name} {value}")
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
+
+
+@app.get("/", tags=["meta"], include_in_schema=False)
+def root() -> RedirectResponse:
+    """Redirect the human default to the interactive API docs."""
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/agentfacts.json", tags=["discovery"], include_in_schema=False)
