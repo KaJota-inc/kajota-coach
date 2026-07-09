@@ -96,6 +96,14 @@
       "languages": ["en"],
       "input_modes": ["text"],
       "output_modes": ["text"]
+    },
+    {
+      "id": "demo.run",
+      "label": "One-click end-to-end escrow demo",
+      "description": "Runs the full lock → release cycle server-side and returns a step-by-step transcript. Powers a hosted playground page reviewers hit to see a real Sepolia settlement in one click.",
+      "languages": ["en"],
+      "input_modes": ["text"],
+      "output_modes": ["text"]
     }
   ],
   "stack": {

@@ -6,7 +6,11 @@ Base URL: `https://kajota-mesh-skill.onrender.com`
 
 Free tier: the first request after ~15 minutes idle can take 30–60 seconds while the service wakes up. Retry once.
 
-## Quickstart — three curl calls to a real Sepolia settlement
+## Two-click quickstart (no terminal)
+
+Open [the playground](https://kajota-mesh-skill.onrender.com/), click **Run Live Demo**. Watch the whole cycle — create wallets → lock → release — animate step-by-step, ending on a real Sepolia Etherscan transaction. Recent runs are logged so you can see prior successful cycles too.
+
+## Three-curl quickstart
 
 ```bash
 BASE=https://kajota-mesh-skill.onrender.com
@@ -22,6 +26,12 @@ Reference agent in ~50 lines of pure-stdlib Python: [`examples/example_agent.py`
 ---
 
 ## Endpoints
+
+### `POST /demo/run`
+Run the whole cycle server-side and return a step-by-step transcript.  Powers the playground page and is a one-call proof-of-life for any calling agent.  Response is `{run_id, duration_ms, mode, steps: [...]}` where each step carries `{step, ok, data, ts}`.
+
+### `GET /history`
+Ring buffer of the last 20 recorded demo runs.  Response: `{runs: [...]}`.
 
 ### `GET /healthz`
 Liveness + chain probe.

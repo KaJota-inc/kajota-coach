@@ -478,6 +478,23 @@ class MeshClient:
     def counters(self) -> dict[str, int]:
         return dict(self._counters)
 
+    # ------------------------------------------------------------------
+    # Demo transcript ring buffer — powers the playground page.
+    # ------------------------------------------------------------------
+
+    def demo_history(self) -> list[dict[str, Any]]:
+        return list(getattr(self, "_demo_history", []))
+
+    def push_demo_run(self, transcript: dict[str, Any]) -> None:
+        buf = getattr(self, "_demo_history", None)
+        if buf is None:
+            buf = []
+            self._demo_history = buf  # type: ignore[attr-defined]
+        buf.append(transcript)
+        # Keep last 20 to bound memory.
+        if len(buf) > 20:
+            del buf[: len(buf) - 20]
+
     def chain_status(self) -> dict[str, Any]:
         """Quick health report for the ``/healthz`` endpoint."""
         if not self.live:
