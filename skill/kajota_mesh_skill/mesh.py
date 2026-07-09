@@ -401,9 +401,10 @@ class MeshClient:
         s = self._settings
         buyer_acct = self._w3.eth.account.from_key(buyer.private_key)
 
-        # 1. approve USDC → escrow for gross_amount_units
+        # 1. approve USDC → escrow for gross_amount_units.  web3 v7 requires
+        # a checksum-cased address for contract arguments.
         approve_tx = self._usdc.functions.approve(
-            self._settings.escrow_address, gross_amount_units
+            Web3.to_checksum_address(self._settings.escrow_address), gross_amount_units
         ).build_transaction(
             {
                 "from": buyer_acct.address,
