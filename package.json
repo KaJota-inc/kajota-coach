@@ -64,7 +64,7 @@
     "viem": "^2.50.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
+    "@babel/core": "^7.29.6",
     "@types/react": "~18.2.45",
     "patch-package": "^8.0.1",
     "typescript": "~5.3.3"
