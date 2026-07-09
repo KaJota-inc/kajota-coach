@@ -1,0 +1,11 @@
+# ignore transient outputs but keep committed artifacts
+demo.gif
+frames/
+beats/
+vo/
+caps/
+base.mp4
+captioned.mp4
+vo_track.wav
+verify_*.png
+contact_sheet.png
