@@ -415,7 +415,21 @@ def demo_run(client: Annotated[MeshClient, Depends(get_client)]) -> dict[str, ob
             buyer_wallet_id=buyer.wallet_id,
             listing_id=listing,
             gross_amount_units=gross_units,
+            auto_register_with_seller_wallet_id=seller.wallet_id,
+            product_id=listing,
         )
+        if lock.listing_tx_hash:
+            step(
+                "registry.register",
+                True,
+                {
+                    "listing_id": lock.listing_id,
+                    "tx_hash": lock.listing_tx_hash,
+                    "explorer_url": _explorer_url_for_tx(
+                        lock.listing_tx_hash, _settings.chain_id
+                    ),
+                },
+            )
         step(
             "escrow.lock",
             True,

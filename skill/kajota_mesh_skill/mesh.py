@@ -101,6 +101,7 @@ class LockResult:
     listing_id: str
     buyer_address: str
     gross_amount_units: int
+    listing_tx_hash: str | None = None  # non-None when we had to register the listing first
 
 
 @dataclass
@@ -370,8 +371,65 @@ class MeshClient:
     # inside the SKILL.md-only surface.
     # ------------------------------------------------------------------
 
+    def register_listing_from_wallet(
+        self,
+        wholesaler_wallet_id: str,
+        product_id: str,
+        coseller_address: str,
+        commission_bps: int = 1000,
+        currency: str = "USDC",
+    ) -> tuple[bytes, str]:
+        """Register a fresh listing in the CosellRegistry.
+
+        The escrow contract's ``deposit`` reverts with ``ListingNotActive``
+        unless the referenced listing has been registered here first, and
+        the registry enforces ``wholesaler == msg.sender`` — so the
+        wholesaler wallet signs the registration.  Returns
+        ``(listing_id_bytes, tx_hash)``.  Dry-run returns synthetic.
+        """
+        w = self._wallets.get(wholesaler_wallet_id)
+        if w is None:
+            raise KeyError(f"wallet {wholesaler_wallet_id!r} not found")
+
+        if not self.live:
+            fake_id = hashlib.sha256(
+                (product_id + w.address + coseller_address).encode()
+            ).digest()
+            return fake_id, f"0xdry-listing-{wholesaler_wallet_id[:12]}"
+
+        wholesaler_acct = self._w3.eth.account.from_key(w.private_key)
+        coseller_checksum = Web3.to_checksum_address(coseller_address)
+
+        register_tx = self._registry.functions.register(
+            product_id,
+            wholesaler_acct.address,
+            coseller_checksum,
+            int(commission_bps),
+            currency,
+        ).build_transaction(
+            {
+                "from": wholesaler_acct.address,
+                "nonce": self._w3.eth.get_transaction_count(wholesaler_acct.address),
+                "chainId": self._settings.chain_id,
+            }
+        )
+        signed = wholesaler_acct.sign_transaction(register_tx)
+        tx_hash = self._w3.eth.send_raw_transaction(signed.raw_transaction)
+        receipt = self._w3.eth.wait_for_transaction_receipt(tx_hash, timeout=180)
+
+        events = self._registry.events.ListingRegistered().process_receipt(receipt)
+        if not events:
+            raise RuntimeError("listing registered but ListingRegistered event missing")
+        listing_id_bytes: bytes = events[0]["args"]["listingId"]
+        return listing_id_bytes, tx_hash.hex()
+
     def lock_from_wallet(
-        self, buyer_wallet_id: str, listing_id: str, gross_amount_units: int
+        self,
+        buyer_wallet_id: str,
+        listing_id: str,
+        gross_amount_units: int,
+        auto_register_with_seller_wallet_id: str | None = None,
+        product_id: str | None = None,
     ) -> LockResult:
         """Approve USDC and call ``deposit`` from a managed buyer wallet.
 
@@ -379,13 +437,34 @@ class MeshClient:
         deposit transaction, so the caller can use it against
         ``/escrow/release`` or ``/escrow/refund`` immediately.
 
+        When ``auto_register_with_seller_wallet_id`` is set, the buyer
+        wallet first calls ``CosellRegistry.register`` — buyer as
+        wholesaler, that wallet as coseller — using ``product_id`` (or a
+        derived value) as the human-readable product identifier.  The
+        computed on-chain listingId is used in place of ``listing_id``
+        for the deposit call.
+
         Dry-run returns synthetic ids so the demo runs without chain.
         """
         buyer = self._wallets.get(buyer_wallet_id)
         if buyer is None:
             raise KeyError(f"wallet {buyer_wallet_id!r} not found")
 
-        listing_bytes = hash_listing_id(listing_id)
+        listing_tx_hash: str | None = None
+        if auto_register_with_seller_wallet_id is not None:
+            seller = self._wallets.get(auto_register_with_seller_wallet_id)
+            if seller is None:
+                raise KeyError(
+                    f"seller wallet {auto_register_with_seller_wallet_id!r} not found"
+                )
+            pid = product_id or listing_id
+            listing_bytes, listing_tx_hash = self.register_listing_from_wallet(
+                wholesaler_wallet_id=buyer_wallet_id,
+                product_id=pid,
+                coseller_address=seller.address,
+            )
+        else:
+            listing_bytes = hash_listing_id(listing_id)
 
         if not self.live:
             fake_deposit = "0xdep" + secrets.token_hex(29)
@@ -396,6 +475,7 @@ class MeshClient:
                 listing_id="0x" + listing_bytes.hex(),
                 buyer_address=buyer.address,
                 gross_amount_units=gross_amount_units,
+                listing_tx_hash=listing_tx_hash,
             )
 
         s = self._settings
@@ -445,6 +525,7 @@ class MeshClient:
             listing_id="0x" + listing_bytes.hex(),
             buyer_address=buyer_acct.address,
             gross_amount_units=gross_amount_units,
+            listing_tx_hash=listing_tx_hash,
         )
 
     # ------------------------------------------------------------------
