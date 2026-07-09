@@ -404,8 +404,12 @@ def demo_run(client: Annotated[MeshClient, Depends(get_client)]) -> dict[str, ob
         )
 
         listing = f"playground-{run_id}"
-        gross_units = 42_500_000  # $42.50 USDC
-        step("escrow.quote", True, {"amount_usd": 42.5, "gross_amount_units": gross_units})
+        gross_units = _settings.demo_lock_amount_units
+        step(
+            "escrow.quote",
+            True,
+            {"amount_usd": round(gross_units / 1_000_000, 4), "gross_amount_units": gross_units},
+        )
 
         lock = client.lock_from_wallet(
             buyer_wallet_id=buyer.wallet_id,

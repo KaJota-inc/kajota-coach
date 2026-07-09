@@ -40,12 +40,16 @@ class Settings(BaseSettings):
     dry_run: bool = False
 
     wallet_eth_grant_wei: int = Field(
-        default=10_000_000_000_000_000,  # 0.01 ETH
+        default=2_000_000_000_000_000,  # 0.002 ETH — enough for ~10 tx of ordinary Sepolia gas.
         description="Wei sent to each freshly-created managed wallet for gas.",
     )
     wallet_usdc_grant_units: int = Field(
-        default=100_000_000,  # 100 USDC (6 decimals)
+        default=500_000,  # 0.50 USDC — a demo cycle needs ~0.05 USDC per wallet, this is buffer.
         description="USDC base units transferred to each fresh managed wallet.",
+    )
+    demo_lock_amount_units: int = Field(
+        default=100_000,  # 0.10 USDC — /demo/run locks this much, leaving budget for many runs.
+        description="USDC base units locked by /demo/run to keep the treasury sustainable.",
     )
 
     @property

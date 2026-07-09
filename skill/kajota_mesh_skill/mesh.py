@@ -310,9 +310,16 @@ class MeshClient:
         return wallet
 
     def _fund_wallet(self, wallet: ManagedWallet) -> None:
-        """Transfer ETH + USDC from treasury to a fresh managed wallet."""
+        """Transfer ETH + USDC from treasury to a fresh managed wallet.
+
+        Waits for both funding transactions to mine before returning so
+        the wallet is actually usable when the caller proceeds to lock.
+        Skips the USDC transfer gracefully if the treasury has zero
+        USDC — the caller will get a clear error at lock time instead
+        of a silent failure now.
+        """
         s = self._settings
-        # 1. Native ETH grant for gas.
+        # 1. Native ETH grant for gas (required for the wallet to submit anything).
         eth_tx = {
             "from": self._treasury.address,
             "to": wallet.address,
@@ -323,8 +330,15 @@ class MeshClient:
             "chainId": s.chain_id,
         }
         eth_signed = self._treasury.sign_transaction(eth_tx)
-        self._w3.eth.send_raw_transaction(eth_signed.raw_transaction)
-        # 2. USDC grant via ERC-20 transfer.
+        eth_hash = self._w3.eth.send_raw_transaction(eth_signed.raw_transaction)
+        self._w3.eth.wait_for_transaction_receipt(eth_hash, timeout=90)
+
+        # 2. USDC grant — only if treasury actually holds any.
+        treasury_usdc = int(
+            self._usdc.functions.balanceOf(self._treasury.address).call()
+        )
+        if treasury_usdc < s.wallet_usdc_grant_units:
+            return  # let lock() surface a clear "insufficient USDC" error later
         usdc_tx = self._usdc.functions.transfer(
             wallet.address, s.wallet_usdc_grant_units
         ).build_transaction(
@@ -335,7 +349,8 @@ class MeshClient:
             }
         )
         usdc_signed = self._treasury.sign_transaction(usdc_tx)
-        self._w3.eth.send_raw_transaction(usdc_signed.raw_transaction)
+        usdc_hash = self._w3.eth.send_raw_transaction(usdc_signed.raw_transaction)
+        self._w3.eth.wait_for_transaction_receipt(usdc_hash, timeout=90)
 
     def get_wallet(self, wallet_id: str) -> ManagedWallet | None:
         return self._wallets.get(wallet_id)

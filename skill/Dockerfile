@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir hatchling \
 
 COPY kajota_mesh_skill ./kajota_mesh_skill
 COPY abis ./abis
+COPY SKILL.md agentfacts.json ./
+COPY examples ./examples
+COPY verify-skill.sh ./
 
 ENV PORT=8081
 EXPOSE 8081
