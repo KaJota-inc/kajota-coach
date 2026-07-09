@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from kajota_mesh_skill.mesh import MeshClient
 from kajota_mesh_skill.settings import Settings
+
+_SKILL_DIR = Path(__file__).resolve().parents[1]
 
 app = FastAPI(
     title="KaJota Mesh Skill",
@@ -173,6 +177,19 @@ def refund(
         tx_hash=tx_hash,
         explorer_url=_explorer_url_for_tx(tx_hash, _settings.chain_id),
     )
+
+
+@app.get("/agentfacts.json", tags=["discovery"], include_in_schema=False)
+def agentfacts() -> FileResponse:
+    """Serve the AgentFacts record so the MIT NANDA Index can pull it directly."""
+    return FileResponse(_SKILL_DIR / "agentfacts.json", media_type="application/json")
+
+
+@app.get("/skill.md", tags=["discovery"], response_class=PlainTextResponse, include_in_schema=False)
+@app.get("/SKILL.md", tags=["discovery"], response_class=PlainTextResponse, include_in_schema=False)
+def skill_md() -> PlainTextResponse:
+    """Serve SKILL.md so a discovering agent can fetch it from the deployed host."""
+    return PlainTextResponse((_SKILL_DIR / "SKILL.md").read_text(), media_type="text/markdown")
 
 
 def run() -> None:
