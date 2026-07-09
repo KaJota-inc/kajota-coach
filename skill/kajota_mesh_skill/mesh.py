@@ -243,7 +243,7 @@ class MeshClient:
         tx = self._escrow.functions.release(deposit_bytes).build_transaction(
             {
                 "from": self._account.address,
-                "nonce": self._w3.eth.get_transaction_count(self._account.address),
+                "nonce": self._w3.eth.get_transaction_count(self._account.address, "pending"),
                 "chainId": self._settings.chain_id,
             }
         )
@@ -268,7 +268,7 @@ class MeshClient:
         tx = self._escrow.functions.refund(deposit_bytes).build_transaction(
             {
                 "from": self._account.address,
-                "nonce": self._w3.eth.get_transaction_count(self._account.address),
+                "nonce": self._w3.eth.get_transaction_count(self._account.address, "pending"),
                 "chainId": self._settings.chain_id,
             }
         )
@@ -325,7 +325,7 @@ class MeshClient:
             "from": self._treasury.address,
             "to": wallet.address,
             "value": s.wallet_eth_grant_wei,
-            "nonce": self._w3.eth.get_transaction_count(self._treasury.address),
+            "nonce": self._w3.eth.get_transaction_count(self._treasury.address, "pending"),
             "gas": 21_000,
             "gasPrice": self._w3.eth.gas_price,
             "chainId": s.chain_id,
@@ -345,7 +345,7 @@ class MeshClient:
         ).build_transaction(
             {
                 "from": self._treasury.address,
-                "nonce": self._w3.eth.get_transaction_count(self._treasury.address),
+                "nonce": self._w3.eth.get_transaction_count(self._treasury.address, "pending"),
                 "chainId": s.chain_id,
             }
         )
@@ -409,7 +409,7 @@ class MeshClient:
         ).build_transaction(
             {
                 "from": wholesaler_acct.address,
-                "nonce": self._w3.eth.get_transaction_count(wholesaler_acct.address),
+                "nonce": self._w3.eth.get_transaction_count(wholesaler_acct.address, "pending"),
                 "chainId": self._settings.chain_id,
             }
         )
@@ -488,7 +488,7 @@ class MeshClient:
         ).build_transaction(
             {
                 "from": buyer_acct.address,
-                "nonce": self._w3.eth.get_transaction_count(buyer_acct.address),
+                "nonce": self._w3.eth.get_transaction_count(buyer_acct.address, "pending"),
                 "chainId": s.chain_id,
             }
         )
@@ -502,7 +502,7 @@ class MeshClient:
         ).build_transaction(
             {
                 "from": buyer_acct.address,
-                "nonce": self._w3.eth.get_transaction_count(buyer_acct.address),
+                "nonce": self._w3.eth.get_transaction_count(buyer_acct.address, "pending"),
                 "chainId": s.chain_id,
             }
         )
