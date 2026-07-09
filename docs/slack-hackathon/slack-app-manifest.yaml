@@ -1,0 +1,51 @@
+# Paste this at api.slack.com/apps → Create New App → From an app manifest.
+# Replace <YOUR_RENDER_URL> with the URL of the deployed slack service
+# (e.g. https://kajota-concierge-slack.onrender.com).
+
+display_information:
+  name: Kajota Coach
+  description: The co-seller's control room — a Gemini + MongoDB MCP agent that watches your merchant catalogue and settles escrow on-chain.
+  background_color: "#1a1a1a"
+  long_description: >
+    Kajota Coach turns your Slack workspace into a co-selling control room.
+    /kajota watch adds a product to your team's watchlist. /kajota status
+    fires a proactive agent turn that reads live purchases, wishlist deltas,
+    and catalogue drops from MongoDB Atlas via the official MongoDB MCP
+    server. /kajota pay prepares a real on-chain USDC escrow deposit against
+    the Kajota Mesh contracts (CosellRegistry + CosellEscrow on Mantle
+    Sepolia). @mention the bot in any channel it's in for free-form chat —
+    every reply is grounded in the live merchant catalogue, no RAG indexer.
+
+features:
+  bot_user:
+    display_name: kajota
+    always_online: true
+  slash_commands:
+    - command: /kajota
+      description: Talk to Kajota Coach — watch, status, or pay
+      usage_hint: "watch <product> | status | pay <listing> <usdc-amount> | help"
+      url: https://<YOUR_RENDER_URL>/slack/commands/kajota
+      should_escape: false
+
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - chat:write.public
+      - commands
+      - app_mentions:read
+      - im:history
+      - im:read
+      - im:write
+
+settings:
+  event_subscriptions:
+    request_url: https://<YOUR_RENDER_URL>/slack/events
+    bot_events:
+      - app_mention
+      - message.im
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

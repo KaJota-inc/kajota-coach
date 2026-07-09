@@ -22,13 +22,14 @@ import os
 import uuid
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types as gen_types
 from pydantic import BaseModel
 
 from kajota_concierge.agent import root_agent
+from kajota_concierge.slack_app import build_slack_app
 
 APP_NAME = "kajota-concierge"
 
@@ -223,6 +224,27 @@ async def proactive(req: ProactiveRequest) -> ChatResponse:
         session_id=req.sessionId,
         message=_PROACTIVE_PROMPT,
     )
+
+
+# ─── Slack transport ───────────────────────────────────────────────
+#
+# Mounted only when SLACK_BOT_TOKEN + SLACK_SIGNING_SECRET are both set.
+# The mobile /chat + /proactive endpoints keep working either way — the
+# Slack app is a pure additional surface.
+
+_slack_app = build_slack_app(run_agent_turn=_run_agent_turn)
+if _slack_app is not None:
+    from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
+
+    _slack_handler = AsyncSlackRequestHandler(_slack_app)
+
+    @app.post("/slack/events")
+    async def slack_events(req: Request):
+        return await _slack_handler.handle(req)
+
+    @app.post("/slack/commands/kajota")
+    async def slack_command(req: Request):
+        return await _slack_handler.handle(req)
 
 
 def _summarise_event(event: Any) -> dict[str, Any]:

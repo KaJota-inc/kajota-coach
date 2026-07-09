@@ -35,6 +35,20 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "python-dotenv>=1.0.0",
+
+    # Slack transport — Bolt async SDK. Mounted inside the same FastAPI
+    # process; only activates when SLACK_BOT_TOKEN + SLACK_SIGNING_SECRET
+    # are both set. Bolt handles the URL-verification challenge, signing-
+    # secret verification, retries, and ack budgeting so the agent-turn
+    # coroutine only ever sees a validated payload.
+    "slack-bolt>=1.21.0",
+
+    # web3 + eth-account power the on-chain settlement path used by the
+    # /kajota pay Slack command. Talks to the Mesh CosellRegistry +
+    # CosellEscrow on Mantle Sepolia (chain 5003) by default; env vars
+    # override for Amoy or Ethereum Sepolia.
+    "web3>=7.5.0",
+    "eth-account>=0.13.0",
 ]
 
 [project.scripts]

@@ -13,11 +13,11 @@
 
 services:
   - type: web
-    name: kajota-concierge-agent
+    name: kajota-concierge-slack
     runtime: docker
     rootDir: agent
     plan: free
-    branch: hackathon/rapid-agent
+    branch: hackathon/slack
     region: oregon
 
     dockerfilePath: agent/Dockerfile
@@ -66,3 +66,27 @@ services:
       # ---- Optional ----------------------------------------------
       - key: COACH_BACKEND_URL
         sync: false   # The kajota-mobile-backend Render URL, if used
+
+      # ---- Slack transport (Slack Agent Builder Challenge) ---------
+      # From api.slack.com/apps → your app.
+      # Bot token: OAuth & Permissions → Bot User OAuth Token (xoxb-…)
+      # Signing secret: Basic Information → App Credentials
+      # Neither is set by the deploy spec — dashboard-only, so the
+      # secrets never touch git.
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
+        sync: false
+
+      # ---- Mesh on-chain settlement (used by /kajota pay) ----------
+      # Default chain has the full stack live (Registry + Escrow +
+      # MockUSDC). Amoy currently only has Registry + USDC — no escrow.
+      - key: MESH_CHAIN
+        value: mantle-sepolia
+      # OPTIONAL demo-relayer wallet. If set, /kajota pay signs and
+      # broadcasts both txs from this wallet — the Slack demo shows a
+      # real settlement receipt. If unset, /kajota pay returns unsigned
+      # tx pairs for the Slack user to sign in their own wallet. Use a
+      # throwaway key funded from the Mantle Sepolia faucet ONLY.
+      - key: MESH_RELAYER_PRIVATE_KEY
+        sync: false
