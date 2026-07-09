@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     dry_run: bool = False
 
     wallet_eth_grant_wei: int = Field(
-        default=2_000_000_000_000_000,  # 0.002 ETH — enough for ~10 tx of ordinary Sepolia gas.
+        default=8_000_000_000_000_000,  # 0.008 ETH — covers approve (~50k gas) + deposit
+        # (~150k) plus a safety margin at ~20 gwei on Sepolia.  Earlier 0.002 ETH was too
+        # tight: build_transaction's gas estimate failed on insufficient-funds for deposit.
         description="Wei sent to each freshly-created managed wallet for gas.",
     )
     wallet_usdc_grant_units: int = Field(
