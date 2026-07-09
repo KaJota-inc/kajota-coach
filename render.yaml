@@ -79,8 +79,10 @@ services:
     branch: hackathon/nanda-mesh-skill
     region: oregon
 
-    dockerfilePath: skill/Dockerfile
-    dockerContext: skill
+    # dockerfilePath + dockerContext are relative to rootDir, so no repeated
+    # "skill/" prefix (that produced /opt/render/project/src/skill/skill/…).
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
 
     healthCheckPath: /healthz
 
