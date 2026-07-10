@@ -6,6 +6,10 @@ Base URL: `https://kajota-mesh-skill.onrender.com`
 
 Free tier: the first request after ~15 minutes idle can take 30–60 seconds while the service wakes up. Retry once.
 
+## Demo video
+
+**▶ [youtu.be/KsewkVQogp4](https://youtu.be/KsewkVQogp4)** — 2:29 walkthrough. Part 1: two AI agents (buyer + seller) settling a trade end-to-end through the skill's HTTP surface, no wallet keys held by either agent. Part 2: the same skill viewed from the browser — playground, real Sepolia Etherscan transaction, interactive OpenAPI docs, SKILL.md, and the AgentFacts JSON registered in the MIT NANDA Index.
+
 ## Two-click quickstart (no terminal)
 
 Open [the playground](https://kajota-mesh-skill.onrender.com/), click **Run Live Demo**. Watch the whole cycle — create wallets → lock → release — animate step-by-step, ending on a real Sepolia Etherscan transaction. Recent runs are logged so you can see prior successful cycles too.
