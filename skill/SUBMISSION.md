@@ -110,14 +110,21 @@ $5.00 invoice, Band-A supplier, 90% advance:
 
   | Contract | Address | Status |
   |---|---|---|
+  | **ReceivableRegistry** (new) | [`0xa0BD67C3…638F8e`](https://amoy.polygonscan.com/address/0xa0BD67C32B357406ab1ceACFBa3f942463638F8e) | ✅ live on Amoy |
+  | **ScoreAttestation** (new) | [`0x2eC77B54…04F1cd`](https://amoy.polygonscan.com/address/0x2eC77B54bdF7C2360f0B6Af22c0978Cd5B04F1cd) | ✅ live on Amoy |
   | MockUSDC | [`0x6F0EaF79…78f4d`](https://amoy.polygonscan.com/address/0x6F0EaF790309e05C550bD7bbdB36ADF6db978f4d) | ✅ live + verified functional |
   | CosellRegistry | [`0x33A1029d…02DA7e`](https://amoy.polygonscan.com/address/0x33A1029d5E43E0A4eb1E9397881390D28f02DA7e) | ✅ live + verified functional |
-  | CosellEscrow | `<pending POL top-up>` | ⏳ |
-  | ReceivableRegistry | `<pending POL top-up>` | ⏳ `deploy:amoy:new` |
-  | ScoreAttestation | `<pending POL top-up>` | ⏳ `deploy:amoy:new` |
+  | CosellEscrow (LoC) | live on Sepolia + Mantle | reused — see §3 |
 
-  Deployer `0x682A3a435B139C4A3E4D0b1C1d7ae89a4f3cF9f6` ·
+  Deployer / attester `0x682A3a435B139C4A3E4D0b1C1d7ae89a4f3cF9f6` ·
   chainId 80002 · explorer https://amoy.polygonscan.com
+
+  **Live proof — on-chain trade-credit score anchored on Polygon:**
+  tx [`0x77a07d9e…c2984`](https://amoy.polygonscan.com/tx/0x77a07d9e8de9f85caf235445a4fcac40fce5cb0ad370e535afb7367c770c2984)
+  — `ScoreAttestation.attest` wrote a 910/Band-A score for a demo SME
+  (block 41860842); `verifyPayload` returns true against the off-chain
+  payload. The scoring service anchors here via
+  `MESH_SCORE_ATTESTATION_ADDRESS=0x2eC77B54bdF7C2360f0B6Af22c0978Cd5B04F1cd`.
 
 ## 9. Roadmap
 
