@@ -1,8 +1,13 @@
 # KaJota Mesh Escrow — SKILL.md
 
-> On-chain USDC escrow for AI agents. Lock funds against a listing, release on
-> proof of delivery, or refund — all on Ethereum Sepolia, no wallet keys
-> required on the calling agent's side.
+> On-chain ERC-20 escrow for AI agents. Lock funds against a listing, release
+> on proof of delivery, or refund — on **XLayer testnet** (OKX's Polygon-CDK
+> L2, chain 195), no wallet keys required on the calling agent's side.
+>
+> Sold as an A2A escrow companion to the Coach ASP on OKX.AI: the buyer's
+> Coach A2MCP call surfaces a product, then this skill escrows funds until
+> delivery is confirmed. Contracts also deployed to Ethereum Sepolia and
+> Arbitrum Sepolia — same bytecode, same interface, different chain.
 
 This file is what a calling agent reads to use the service end-to-end. No
 other documentation, no human walkthrough. If the agent can follow this
@@ -33,10 +38,21 @@ gate `release` and `refund` behind a HMAC-signed request header.
 
 ## Stack
 
+Primary target — **XLayer testnet** (OKX's Polygon-CDK L2):
+
 | Layer | Value |
 |---|---|
-| Chain | Ethereum Sepolia (chainId `11155111`) |
-| USDC | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` (6 decimals) |
+| Chain | XLayer Testnet (chainId `195`) |
+| Stablecoin | `KJUSD` — MockUSDC 6-decimal ERC20 (address in `deployments/195.json` after deploy) |
+| `CosellRegistry` | See `deployments/195.json` (set at deploy time) |
+| `CosellEscrow` | See `deployments/195.json` (set at deploy time) |
+| Explorer | https://www.oklink.com/x-layer-testnet |
+
+Secondary (previously deployed, same bytecode) — Ethereum Sepolia (chainId `11155111`):
+
+| Layer | Value |
+|---|---|
+| USDC | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` (Circle testnet USDC) |
 | `CosellRegistry` | `0xfce6bd68d8d6f858d447f537d206c1e354b44315` |
 | `CosellEscrow` | `0x599869cef2e4c52e2c9074caaf8f9fb0cb191776` |
 | Explorer | https://sepolia.etherscan.io |

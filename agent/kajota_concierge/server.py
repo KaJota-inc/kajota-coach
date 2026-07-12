@@ -33,7 +33,7 @@ from pydantic import BaseModel
 
 from kajota_concierge.agent import root_agent
 from kajota_concierge import witness_client
-from kajota_concierge.x402_casper import (
+from kajota_concierge.x402_xlayer import (
     PaymentRequiredError,
     X402Config,
     build_payment_requirements,
@@ -44,10 +44,13 @@ APP_NAME = "kajota-concierge"
 
 # x402 paywall config for the premium endpoint. Resolved once from the
 # environment at import; `configured` is False on a clean checkout (no
-# sponsored CSPR.cloud key), in which case /coach/premium still answers 402
-# but explains what's missing rather than charging.
+# facilitator URL / payTo / asset), in which case /coach/premium still
+# answers 402 but explains what's missing rather than charging.
+#
+# Wired to XLayer (OKX's Polygon-CDK L2 — testnet 195, mainnet 196) for
+# the OKX.AI Genesis Hackathon A2MCP listing.
 _X402 = X402Config.from_env(
-    description="KaJota Coach — premium agentic purchase insight",
+    description="KaJota Coach — premium agentic purchase insight (OKX.AI ASP)",
 )
 
 app = FastAPI(
@@ -92,7 +95,7 @@ class ProactiveRequest(BaseModel):
 class PremiumRequest(BaseModel):
     """Body for POST /coach/premium — the x402-gated insight endpoint.
 
-    Same shape as a chat turn, but the caller must attach a settled Casper
+    Same shape as a chat turn, but the caller must attach a settled XLayer
     x402 payment (``X-PAYMENT`` header) for the request to run. ``message``
     is optional: with none, the agent produces a full proactive deep-dive.
     """
@@ -113,10 +116,10 @@ class ChatResponse(BaseModel):
 class PremiumResponse(ChatResponse):
     """A ChatResponse plus the on-chain settlement receipt.
 
-    ``settlement`` carries the Casper deploy hash the facilitator produced
-    when it settled the CEP-18 micropayment — the verifiable proof that this
-    agent turn was paid for on-chain. Also surfaced in the
-    ``X-PAYMENT-RESPONSE`` header per the x402 standard.
+    ``settlement`` carries the XLayer tx hash the facilitator produced
+    when it settled the ERC-3009 / Permit2 micropayment — the verifiable
+    proof that this agent turn was paid for on-chain. Also surfaced in
+    the ``X-PAYMENT-RESPONSE`` header per the x402 standard.
     """
 
     settlement: dict[str, Any]
@@ -343,11 +346,14 @@ async def coach_premium_info(request: Request) -> JSONResponse:
         "x402Version": 2,
         "accepts": [requirements],
         "message": (
-            "This is an x402-paywalled endpoint. It settles a CEP-18 "
-            "micropayment on Casper. Send a POST with a JSON body and an "
-            "`X-PAYMENT` header carrying a signed `transfer_with_authorization`; "
-            "the CSPR.cloud facilitator settles it on-chain and the response "
-            "returns the premium insight plus the settlement receipt."
+            "This is an x402-paywalled endpoint. It settles an ERC-20 "
+            "micropayment on XLayer (OKX's Polygon-CDK L2). Send a POST "
+            "with a JSON body and an `X-PAYMENT` header carrying a signed "
+            "EIP-3009 `transferWithAuthorization` or Permit2 payload; the "
+            "configured facilitator settles it on-chain and the response "
+            "returns the premium insight plus the settlement receipt. "
+            "Discoverable on the OKX.AI marketplace as an A2MCP Agent "
+            "Service Provider (Kajota Coach)."
         ),
         "howToPay": {
             "method": "POST",
@@ -373,16 +379,17 @@ async def coach_premium_info(request: Request) -> JSONResponse:
 
 @app.post("/coach/premium", response_model=PremiumResponse)
 async def coach_premium(req: PremiumRequest, request: Request) -> JSONResponse:
-    """Pay-per-call premium insight, settled on Casper via x402.
+    """Pay-per-call premium insight, settled on XLayer via x402.
 
-    The agentic-payments showcase: an agent that wants this richer analysis
-    pays for it with a CEP-18 micropayment over HTTP — no account, no API
-    key, just a signed authorisation the Casper facilitator settles on-chain.
+    The agentic-payments showcase: an OKX.AI marketplace agent that wants
+    this richer analysis pays for it with an ERC-20 micropayment over
+    HTTP — no account, no API key, just a signed EIP-3009 / Permit2
+    authorisation the configured facilitator settles on XLayer.
 
-    Flow: ``require_payment`` raises ``PaymentRequiredError`` (→ 402 with the
-    price tag) until the caller retries with a valid ``X-PAYMENT`` header;
-    once the facilitator settles, we run the deep-dive agent turn and return
-    it with the on-chain deploy hash attached.
+    Flow: ``require_payment`` raises ``PaymentRequiredError`` (→ 402 with
+    the price tag) until the caller retries with a valid ``X-PAYMENT``
+    header; once the facilitator settles, we run the deep-dive agent
+    turn and return it with the XLayer tx hash attached.
     """
     settlement = await require_payment(request, _X402)
 

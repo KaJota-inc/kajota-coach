@@ -1,9 +1,10 @@
 # Render service config for the KaJota Concierge agent.
 #
-# One-click deploy from this branch (hackathon/rapid-agent):
+# One-click deploy from this branch (hackathon/okx-asp — OKX.AI
+# Genesis Hackathon, Jul 8–17, 2026):
 #   1. Connect this repo to your Render account
 #   2. Point at this render.yaml
-#   3. Set branch = hackathon/rapid-agent
+#   3. Set branch = hackathon/okx-asp
 #   4. Provision the secrets below via the Render dashboard
 #      (sync: false fields below — Render won't accept JSON in
 #      env vars, so use Secret Files for the GCP credential)
@@ -17,7 +18,7 @@ services:
     runtime: docker
     rootDir: agent
     plan: free
-    branch: hackathon/rapid-agent
+    branch: hackathon/okx-asp
     region: oregon
 
     dockerfilePath: agent/Dockerfile
@@ -63,51 +64,51 @@ services:
       - key: MONGODB_URI
         sync: false   # Render dashboard input (MongoDB Atlas SRV URI)
 
-      # ---- Casper x402 paywall (POST /coach/premium) --------------
-      # Premium agent turns settle a CEP-18 micropayment on Casper via
-      # the CSPR.cloud x402 Facilitator. Public values are baked in below
-      # (our deployed KaJota USD token + merchant account + testnet feePayer);
-      # only X402_FACILITATOR_API_KEY is a secret set in the dashboard. Until
-      # it's set, /coach/premium returns 402 and explains it's unconfigured —
-      # the service still boots fine.
+      # ---- XLayer x402 paywall (POST /coach/premium) --------------
+      # Premium agent turns settle an ERC-20 micropayment on XLayer
+      # (OKX's Polygon-CDK L2 — testnet chain 195, mainnet 196) via a
+      # standard x402 facilitator. This is the "no human sign-off"
+      # settlement layer for the OKX.AI A2MCP ASP listing. All of the
+      # values below are Render dashboard inputs (sync: false) so we can
+      # register the ASP first, then swap in the facilitator + payTo +
+      # asset without a redeploy. Until they're set, /coach/premium
+      # returns 402 with a "server unconfigured" body — the service
+      # still boots fine.
       - key: X402_FACILITATOR_URL
-        value: https://x402-facilitator.cspr.cloud
+        sync: false             # e.g. Coinbase CDP or OKX-hosted x402 facilitator
       - key: X402_NETWORK
-        value: casper:casper-test
+        value: eip155:195       # XLayer testnet (CAIP-2). Flip to eip155:196 for mainnet.
       - key: X402_MAX_AMOUNT
-        value: "1000000"        # atomic units; KaJota USD 9-dec → 0.001
+        value: "10000"          # atomic units; 6-dec USDC/USDT/KJUSD → $0.01
       - key: X402_PAY_TO
-        value: "000de60d3acb6caba35e66e90a62ebf2707a0e04286de203fb316179c1f2c9ed84"
+        sync: false             # 0x… recipient EOA / contract on XLayer
       - key: X402_ASSET
-        value: "354ca0ad7ef8c97a02b195a1f39e96908fd3bf20d6ec4255850d05f1784fb404"
+        sync: false             # 0x… ERC-20 token address on XLayer (USDC/USDT/KJUSD)
       - key: X402_ASSET_NAME
-        value: KaJota USD
+        value: KaJota USD       # Overwrite if using canonical USDC/USDT
+      - key: X402_ASSET_VERSION
+        value: "2"              # EIP-712 domain version (USDC v2 / ERC-3009)
       - key: X402_ASSET_DECIMALS
-        value: "9"
-      - key: X402_FEE_PAYER
-        value: "81d557c9dcaadea97c34d79bf7b6af07aa9d760e5dd1aabf78a45fb39e072c3a"
+        value: "6"
+      - key: X402_VERSION
+        value: "1"              # Coinbase CDP speaks v1; bump to 2 if OKX facilitator does
       - key: X402_FACILITATOR_API_KEY
-        sync: false             # SECRET — rotated CSPR.cloud key (dashboard)
-      # Casper MCP toolset stays OFF on Render (needs Docker, which the
-      # Python image doesn't have). Enable it locally for the demo. The
-      # x402 paywall above is the deployed on-chain surface.
-      - key: CASPER_MCP_ENABLED
-        value: "0"
+        sync: false             # SECRET — bearer token if facilitator requires it
 
       # ---- Optional ----------------------------------------------
       - key: COACH_BACKEND_URL
         sync: false   # The kajota-mobile-backend Render URL, if used
 
-  # ---- KaJota Mesh Skill (NandaHack Step 2 submission) ------------
-  # On-chain USDC escrow on Ethereum Sepolia, exposed as a
-  # NANDA-discoverable agent skill.  Calling agents read SKILL.md
-  # at skill/SKILL.md to use this service end-to-end.
+  # ---- KaJota Mesh Skill (OKX.AI Genesis submission) --------------
+  # On-chain ERC-20 escrow on XLayer testnet, exposed as an agent skill
+  # (SKILL.md at skill/SKILL.md) so downstream OKX.AI agents can settle
+  # A2A escrow deals as a second-tier flow beyond the A2MCP paywall.
   - type: web
     name: kajota-mesh-skill
     runtime: docker
     rootDir: skill
     plan: free
-    branch: hackathon/nanda-mesh-skill
+    branch: hackathon/okx-asp
     region: oregon
 
     dockerfilePath: skill/Dockerfile
@@ -118,18 +119,27 @@ services:
     envVars:
       - key: PORT
         value: "8081"
-      # Sepolia HTTPS RPC (Alchemy / Infura / Ankr) — required to leave dry-run.
+      # XLayer testnet HTTPS RPC — required to leave dry-run.
       - key: MESH_RPC_URL
-        sync: false
+        value: https://testrpc.xlayer.tech
       # Private key for the wallet authorised to call release / refund on
-      # the deployed CosellEscrow.  MUST match releaseAuth on-chain
-      # (0xe10cff27c99074cd44c64bed1b000226442524a4).  Treat as a Secret File
-      # in Render if your team prefers; the env var path works too.
+      # the deployed CosellEscrow. MUST match releaseAuth on-chain (the
+      # deployer of scripts/deploy-xlayer.ts by default). Set from the
+      # Render dashboard or wire a Secret File.
       - key: MESH_RELEASE_AUTH_KEY
         sync: false
-      # Defaults baked into settings.py; override only if you redeploy
-      # the contracts to different addresses.
+      # XLayer testnet chain id — confirmed from okx/onchainos-skills
+      # `cli/src/chains.rs`.
       - key: MESH_CHAIN_ID
-        value: "11155111"
+        value: "195"
       - key: MESH_DRY_RUN
         value: "false"
+      # Contract addresses — set from the dashboard after running
+      # `pnpm --filter @kajota-mesh/contracts deploy:xlayer-testnet-with-mock`
+      # and reading deployments/195.json.
+      - key: MESH_ESCROW_ADDR
+        sync: false
+      - key: MESH_REGISTRY_ADDR
+        sync: false
+      - key: MESH_USDC_ADDR
+        sync: false
