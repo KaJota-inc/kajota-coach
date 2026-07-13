@@ -103,6 +103,10 @@ $5.00 invoice, Band-A supplier, 90% advance:
 
 ## 8. What's live
 
+- **Live interactive web app:** [https://ignyte-9jyi9cbex-kajotadev-1226s-projects.vercel.app](https://ignyte-9jyi9cbex-kajotadev-1226s-projects.vercel.app)
+  — move the sliders to score an SME, and watch the page read the real
+  on-chain attestation from Polygon Amoy (verify on PolygonScan).
+
 - **Local end-to-end demo** (no wallet/faucet): `pnpm demo:trade-finance`
   runs the full lifecycle on-chain with balance invariants asserted.
   See [`DEMO.md`](./DEMO.md).
