@@ -15,11 +15,15 @@ services:
   - type: web
     name: kajota-concierge-slack
     runtime: docker
-    rootDir: agent
     plan: free
     branch: hackathon/slack
     region: oregon
 
+    # rootDir intentionally omitted — Render's Blueprint spec resolves
+    # dockerfilePath and dockerContext RELATIVE to rootDir, so setting
+    # rootDir=agent + dockerfilePath=agent/Dockerfile would look for
+    # agent/agent/Dockerfile and error at clone time. Keep paths
+    # repo-root-relative here.
     dockerfilePath: agent/Dockerfile
     dockerContext: agent
 
