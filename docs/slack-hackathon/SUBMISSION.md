@@ -205,7 +205,7 @@ python -m kajota_concierge.server
 
 ## Demo video
 
-[FILL — ≤3 min. Shot list in docs/slack-hackathon/demo-shot-list.md.]
+**https://www.youtube.com/watch?v=-eMZBU8J91c** — "KAJOTA COACH ADK AGENT" · 2:29 · captioned, real-voice narration. Hits every judging beat: help card → `/kajota status` with the "Used 3 MCP tool calls: find, find, find" footer visible under the wishlist card → `/kajota pay yeezy-hoodie 150` → pending Block Kit card with Approve/Deny buttons → click Approve → in-place `chat_update` → threaded `USDC.approve` + `CosellEscrow.deposit` receipts.
 
 ## Public repo URL
 
@@ -213,5 +213,5 @@ https://github.com/KaJota-inc/kajota-coach/tree/hackathon/slack
 
 ## Live Slack app
 
-Bot: `@kajota` (workspace: [FILL — test workspace invite link])
-Deployed agent: `https://kajota-concierge-slack.onrender.com/` (base), `/slack/events` + `/slack/commands/kajota`
+Bot: `@kajota` (installed in the private KAJOTA test workspace — invite on request)
+Deployed agent: `https://kajota-concierge-slack.onrender.com/` — banner at `/` self-describes every mounted surface (`/chat`, `/proactive`, `/slack/events`, `/slack/commands/kajota`, `/slack/actions`, `/mcp`).
