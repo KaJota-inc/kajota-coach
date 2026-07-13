@@ -32,25 +32,37 @@ Recording tip: run at 1080p, disable Slack notification sounds, close other chan
 - Card appears with 3 MongoDB MCP tool calls surfaced in the context footer + a card carousel: last purchase, wishlist deltas, one recommendation.
 - Note: *"One command → 3 forced MongoDB reads → personalised Block Kit reply. No RAG indexer."*
 
-## Scene 4 · 1:10–1:55 — on-chain settlement
+## Scene 4 · 1:10–2:10 — team-approval + on-chain settlement (headline moment)
 
-- Type `/kajota pay yeezy-hoodie 100`.
-- Ephemeral "Preparing on-chain escrow deposit…" appears.
-- 15–30s later the settlement card appears:
-  ```
-  🔏 Escrow settled — 100.00 USDC on chainId=5003
-  Listing: 0x…
-  1. USDC.approve → 0x… ✅
-  2. CosellEscrow.deposit → 0x… ✅
-  ```
-- Click the second explorer link. Cut to the Mantle Sepolia explorer tab. Point out (mouse hover) the `Deposited` event in the tx logs — matches `bytes32 depositId, bytes32 listingId, address buyer, uint256 grossAmount`.
+This is the differentiator. Slower pacing than the other scenes — let each Slack UI change land visually.
 
-## Scene 5 · 1:55–2:35 — free-form @mention
+- Type `/kajota pay yeezy-hoodie 25`.
+- Ephemeral confirms: *"Waiting for a teammate to approve."*
+- 2–3s later, in-channel card appears:
+  ```
+  Escrow deposit — awaiting approval
+  @you proposes to lock 25.00 USDC in the CosellEscrow for yeezy-hoodie.
+  A workspace teammate should approve before we broadcast.
+  Listing: 0x5c40ff15…  ·  Chain: Mantle Sepolia (5003)
+  [Approve + broadcast] [Deny]
+  ```
+- Caption: *"On-chain USDC settlement — but a teammate has to sign off first. Slack's native buttons are the approval gate."*
+- Click **Approve + broadcast**.
+- Card updates in place: *"Escrow deposit — approved, settling on-chain — ✅ Approved by @you."* Buttons gone.
+- Thread opens under the card. Show the 4 progress messages arriving in real time (this is why we cut the pacing wide):
+  - 🔄 `USDC.approve` — broadcasting…
+  - ✅ `USDC.approve` confirmed `0x…` (~10–15s later)
+  - 🔄 `CosellEscrow.deposit` — broadcasting…
+  - ✅ `CosellEscrow.deposit` confirmed `0x…` (~10–15s later)
+- Final in-thread summary: *"🔏 Escrow settled — 25.00 USDC locked for yeezy-hoodie"* with both explorer links.
+- Click the deposit link. Cut to Mantle Sepolia explorer tab. Point out (mouse hover) the `Deposited` event in the tx logs.
+
+## Scene 5 · 2:10–2:40 — free-form @mention
 
 - Back to Slack. Type `@kajota what are we watching right now?`
 - Threaded reply with the wishlist Yeezy card. **This proves the same agent handles slash commands AND conversational mentions on one runner.**
 
-## Scene 6 · 2:35–3:00 — close
+## Scene 6 · 2:40–3:00 — close
 
 - Split-screen: Slack channel on left, Render logs on right showing the tool trace (`mongodb.find`, `mongodb.insert-one`, `usdc.approve`, `cosellescrow.deposit`).
 - Caption: *"One agent. Slack + mobile + on-chain. Built on Slack Bolt, Google ADK, MongoDB MCP, and web3.py — deployed on Render, settled on Mantle Sepolia."*

@@ -23,7 +23,14 @@ Kajota Coach in Slack is one bot that composes three surfaces the co-seller's te
 
 - **Live merchant catalogue reads** through the official MongoDB MCP server — every reply grounded in what's actually in the database this second, no RAG indexer to keep in sync.
 - **Proactive agent turns** on demand — `/kajota status` fires a multi-tool ADK turn (recent orders, wishlist deltas, catalogue drops) and posts a Slack Block Kit card carousel in-channel.
-- **On-chain escrow settlement** — `/kajota pay yeezy-hoodie 100` prepares (and, if a demo relayer is configured, broadcasts) the two-tx USDC deposit sequence against the Kajota Mesh CosellEscrow on Mantle Sepolia. The Slack reply is a settlement receipt with clickable explorer links.
+- **Team-approved on-chain escrow settlement** — `/kajota pay yeezy-hoodie 25` doesn't broadcast. It resolves the on-chain listing id, then posts a Block Kit card in-channel with **Approve + broadcast** / **Deny** buttons. A workspace teammate clicks Approve → the buttons vanish, the card updates in place with the approver, and a threaded reply fills with live progress as each on-chain tx confirms:
+  > 🔄 USDC.approve — broadcasting…
+  > ✅ USDC.approve confirmed `0x…`
+  > 🔄 CosellEscrow.deposit — broadcasting…
+  > ✅ CosellEscrow.deposit confirmed `0x…`
+  > 🔏 Escrow settled — 25.00 USDC locked for yeezy-hoodie
+
+  That's the co-seller's approval workflow delivered through Slack primitives — Block Kit buttons, `chat_update` to disable a card after click, threaded receipts — not a chatbot pretending to be one.
 
 Everything one workspace, one bot, one 3-second slash-command budget met by ack-first / respond-later architecture.
 
@@ -76,12 +83,23 @@ Everything one workspace, one bot, one 3-second slash-command budget met by ack-
 /kajota watch <product>          → MongoDB `insert-one` on wishlist via agent
 /kajota status                   → proactive agent turn — 3 forced MongoDB
                                    `find` calls + Block Kit card carousel
-/kajota pay <listing> <usdc>     → USDC.approve + CosellEscrow.deposit;
-                                   returns explorer receipt (or unsigned
-                                   tx pair if no relayer key set)
+/kajota pay <listing> <usdc>     → pending card with Approve/Deny buttons
+                                   → click Approve → threaded live tx status
+                                   → USDC.approve + CosellEscrow.deposit
+                                     mined on Mantle Sepolia
 /kajota help                     → static help card
 @kajota <anything>               → free-form agent turn, threaded reply
 ```
+
+### The team-approval flow — why it's Slack-native, not chatbot-in-Slack
+
+Most "AI agent in Slack" submissions treat the workspace as a chat transport: user asks, bot answers, done. The moment your bot needs to *do* something with real consequences, that model breaks — one user shouldn't unilaterally trigger an on-chain payment on behalf of a team. Kajota Coach uses Slack's actual collaboration primitives to solve this:
+
+1. **Block Kit `actions` block** with two buttons (`kajota_approve`, `kajota_deny`) on the pending card.
+2. **In-memory intent store** keyed by an opaque id — the button `value` is the id, not the tx params (so an untrusted user can't rewrite the amount in-flight).
+3. **`chat_update` on click** — the approver is stamped into the card and the buttons vanish, so no double-click race.
+4. **Threaded progress** via `client.chat_postMessage(thread_ts=…)` as each tx is broadcast + confirmed on Mantle Sepolia. The channel stays clean; the receipts live where they belong.
+5. **15-min TTL sweep** — unclaimed proposals get pruned so the store stays bounded on Render's free-tier single worker.
 
 Each Slack user in each workspace gets an isolated ADK session, keyed as `slack:{team_id}:{user_id}` — so `/kajota status` twenty minutes later picks up where the last turn left off, and cross-workspace sharing of a display name never leaks state.
 
@@ -89,17 +107,17 @@ Each Slack user in each workspace gets an isolated ADK session, keyed as `slack:
 
 Slack requires a slash-command ack within 3 seconds. Gemini agent turns with 2–3 MCP tool calls routinely take 8–15s. Bolt's `process_before_response=False` handles the split: we `ack()` immediately with an ephemeral "on it" and post the actual Block Kit reply via `client.chat_postMessage` once the agent turn finishes. Same pattern for `/kajota pay`, where the pre-tx receipt validation + two on-chain sends can take 30s+.
 
-### Slash-command → on-chain, no wallet round-trip in the demo
+### Slash-command → team approval → on-chain, no wallet round-trip in the demo
 
-`/kajota pay yeezy-hoodie 100`:
+`/kajota pay yeezy-hoodie 25`:
 
-1. Hash `yeezy-hoodie` → `bytes32 listingId` (deterministic; same string always addresses the same listing across demo runs).
-2. Read `MockUSDC.decimals()` → 6.
-3. `USDC.approve(escrow, 100 × 10⁶)` — sign + broadcast from the demo relayer.
-4. `CosellEscrow.deposit(listingId, 100 × 10⁶)` — sign + broadcast.
-5. Slack Block Kit reply with two `<explorer_url|0xhash…>` links.
+1. Resolve `yeezy-hoodie` → `bytes32 listingId` by calling `CosellRegistry.listingsForProduct("yeezy-hoodie")` on-chain — so a mistyped hint fails FAST, ephemerally, before a teammate is invited to click.
+2. Read `MockUSDC.decimals()` → 6. Stash a `PendingDeposit(intent_id, listing_hint, gross_amount, requested_by, team_id, channel_id)` in the in-memory store.
+3. Post the pending card with **Approve + broadcast** / **Deny** buttons; the button `value` is the opaque intent id.
+4. On Approve: `send_approve(...)` broadcasts `USDC.approve(escrow, 25 × 10⁶)`, waits for the receipt, posts the threaded confirmation.
+5. Then `send_deposit(...)` broadcasts `CosellEscrow.deposit(listingId, 25 × 10⁶)` — the escrow pulls the USDC via `transferFrom`, emits `Deposited(depositId, listingId, buyer, grossAmount)`, and the threaded confirmation lands with the explorer link.
 
-If `MESH_RELAYER_PRIVATE_KEY` isn't set (default in a public deploy), the same command returns the *unsigned* two-tx pair inside the Block Kit card — the Slack user then signs in their own wallet, keeping the demo self-contained without exposing a hot key.
+If `MESH_RELAYER_PRIVATE_KEY` isn't set (default in a public deploy), `/kajota pay` still works but returns the *unsigned* two-tx pair — the Slack user signs in their own wallet, keeping the demo self-contained without exposing a hot key.
 
 ## Challenges we ran into
 
