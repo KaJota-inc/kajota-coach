@@ -246,6 +246,13 @@ if _slack_app is not None:
     async def slack_command(req: Request):
         return await _slack_handler.handle(req)
 
+    # Interactivity payload for Approve / Deny buttons on the pending
+    # deposit card. Must be registered as the "Interactivity URL" in
+    # the Slack app's Interactivity & Shortcuts settings.
+    @app.post("/slack/actions")
+    async def slack_actions(req: Request):
+        return await _slack_handler.handle(req)
+
 
 def _summarise_event(event: Any) -> dict[str, Any]:
     """Compact event shape for the demo trace.

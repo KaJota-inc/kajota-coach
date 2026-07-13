@@ -240,6 +240,132 @@ def _send(w3: Web3, tx: TxParams, acct: Account) -> str:
     return _normalise_hash(tx_hash)
 
 
+def _setup_call(
+    listing_hint: str, gross_amount_usdc: float
+) -> tuple[dict[str, Any], Web3, Any, Any, int, bytes]:
+    chain = _resolve_chain()
+    w3 = _w3(chain)
+    usdc = w3.eth.contract(
+        address=Web3.to_checksum_address(chain["usdc"]),
+        abi=_load_abi("ERC20.json"),
+    )
+    escrow = w3.eth.contract(
+        address=Web3.to_checksum_address(chain["escrow"]),
+        abi=_load_abi("CosellEscrow.json"),
+    )
+    decimals = usdc.functions.decimals().call()
+    gross_amount = int(gross_amount_usdc * (10 ** decimals))
+    listing_id = _resolve_listing_id(w3, chain, listing_hint)
+    return chain, w3, usdc, escrow, gross_amount, listing_id
+
+
+def send_approve(
+    *,
+    listing_hint: str,
+    gross_amount_usdc: float,
+) -> TxReceipt:
+    """Broadcast USDC.approve(escrow, amount) and wait for the receipt.
+
+    Separated from send_deposit so the Slack interactive-approval flow
+    can post a threaded status update after this one lands and before
+    the deposit tx fires. Both calls share on-chain state via nonce
+    (get_transaction_count returns the mined-count, so waiting for the
+    approve receipt here guarantees the deposit's nonce is right).
+    """
+    chain, w3, usdc, escrow, gross_amount, _ = _setup_call(
+        listing_hint, gross_amount_usdc
+    )
+    acct = _relayer_account()
+    if acct is None:
+        raise MeshConfigError(
+            "MESH_RELAYER_PRIVATE_KEY not set — the interactive approval "
+            "flow requires a signed broadcast from the demo relayer."
+        )
+    from_addr = acct.address
+    chain_id = chain["chain_id"]
+    gas_price = w3.eth.gas_price
+    nonce = w3.eth.get_transaction_count(from_addr)
+    tx = _build_tx(
+        w3,
+        usdc.functions.approve(escrow.address, gross_amount),
+        from_addr,
+        chain_id,
+        nonce,
+        gas_price,
+    )
+    try:
+        tx_hash = _send(w3, tx, acct)
+    except Exception as exc:  # noqa: BLE001
+        raise MeshCallError(f"approve failed: {exc}") from exc
+    w3.eth.wait_for_transaction_receipt(tx_hash, timeout=90)
+    return TxReceipt(
+        label="USDC.approve",
+        hash=tx_hash,
+        explorer_url=f"{chain['explorer_tx']}{tx_hash}",
+        status="confirmed",
+        from_address=from_addr,
+        to_address=usdc.address,
+    )
+
+
+def send_deposit(
+    *,
+    listing_hint: str,
+    gross_amount_usdc: float,
+) -> TxReceipt:
+    """Broadcast CosellEscrow.deposit(listingId, amount) and wait.
+
+    Requires the approve tx from send_approve() to have already been
+    mined so the escrow can pull the USDC in its transferFrom.
+    """
+    chain, w3, usdc, escrow, gross_amount, listing_id = _setup_call(
+        listing_hint, gross_amount_usdc
+    )
+    acct = _relayer_account()
+    if acct is None:
+        raise MeshConfigError(
+            "MESH_RELAYER_PRIVATE_KEY not set — the interactive approval "
+            "flow requires a signed broadcast from the demo relayer."
+        )
+    from_addr = acct.address
+    chain_id = chain["chain_id"]
+    gas_price = w3.eth.gas_price
+    nonce = w3.eth.get_transaction_count(from_addr)
+    tx = _build_tx(
+        w3,
+        escrow.functions.deposit(listing_id, gross_amount),
+        from_addr,
+        chain_id,
+        nonce,
+        gas_price,
+    )
+    try:
+        tx_hash = _send(w3, tx, acct)
+    except Exception as exc:  # noqa: BLE001
+        raise MeshCallError(f"deposit failed: {exc}") from exc
+    w3.eth.wait_for_transaction_receipt(tx_hash, timeout=90)
+    return TxReceipt(
+        label="CosellEscrow.deposit",
+        hash=tx_hash,
+        explorer_url=f"{chain['explorer_tx']}{tx_hash}",
+        status="confirmed",
+        from_address=from_addr,
+        to_address=escrow.address,
+    )
+
+
+def resolve_listing_id_display(listing_hint: str) -> str:
+    """Return the on-chain listing id as a 0x-prefixed hex string.
+
+    Used by the /kajota pay pending card so the approver can see which
+    listing they're settling before clicking Approve — no signing.
+    """
+    chain = _resolve_chain()
+    w3 = _w3(chain)
+    lid = _resolve_listing_id(w3, chain, listing_hint)
+    return "0x" + lid.hex()
+
+
 def build_deposit(
     *,
     listing_hint: str,

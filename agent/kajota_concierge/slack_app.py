@@ -30,6 +30,7 @@ which lets the same Slack user hold a stateful conversation across
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import shlex
@@ -37,11 +38,14 @@ from typing import Any, Callable
 
 from slack_bolt.async_app import AsyncApp
 
-from kajota_concierge import slack_blocks
+from kajota_concierge import slack_blocks, slack_intents
 from kajota_concierge.mesh import (
     MeshCallError,
     MeshConfigError,
     build_deposit,
+    resolve_listing_id_display,
+    send_approve,
+    send_deposit,
 )
 
 
@@ -219,42 +223,60 @@ def build_slack_app(
                         response_type="ephemeral",
                     )
                     return
-                await respond(
-                    text=(
-                        ":ledger: Preparing on-chain escrow deposit for "
-                        f"`{listing_hint}` — {amount:.2f} USDC…"
-                    ),
-                    response_type="ephemeral",
-                )
+                # Look up the on-chain listing id before we ask a
+                # teammate to click Approve — a bad hint should fail
+                # loudly HERE, not after a well-meaning colleague clicks
+                # and the tx reverts.
                 try:
-                    result = build_deposit(
-                        listing_hint=listing_hint,
-                        gross_amount_usdc=amount,
+                    listing_id_display = await asyncio.to_thread(
+                        resolve_listing_id_display, listing_hint
                     )
                 except MeshConfigError as exc:
-                    await client.chat_postMessage(
-                        channel=channel_id,
+                    await respond(
                         blocks=slack_blocks.error_blocks(
                             "Mesh config missing", str(exc)
                         ),
                         text="Mesh config missing",
+                        response_type="ephemeral",
                     )
                     return
                 except MeshCallError as exc:
-                    await client.chat_postMessage(
-                        channel=channel_id,
+                    await respond(
                         blocks=slack_blocks.error_blocks(
-                            "On-chain call failed", str(exc)
+                            "Listing not registered", str(exc)
                         ),
-                        text="On-chain call failed",
+                        text="Listing not registered",
+                        response_type="ephemeral",
                     )
                     return
+
+                intent = slack_intents.PendingDeposit(
+                    intent_id=slack_intents.new_intent_id(),
+                    listing_hint=listing_hint,
+                    gross_amount_usdc=amount,
+                    requested_by_user_id=user_id,
+                    requested_by_display=command.get("user_name") or "someone",
+                    team_id=team_id or "T_unknown",
+                    channel_id=channel_id,
+                    listing_id_display=listing_id_display,
+                    created_at=__import__("time").time(),
+                )
+                slack_intents.put(intent)
+
+                await respond(
+                    text=(
+                        ":ledger: Proposed on-chain escrow deposit for "
+                        f"`{listing_hint}` — {amount:.2f} USDC. Waiting for "
+                        "a teammate to approve."
+                    ),
+                    response_type="ephemeral",
+                )
                 await client.chat_postMessage(
                     channel=channel_id,
-                    blocks=slack_blocks.deposit_result_blocks(result),
+                    blocks=slack_blocks.pending_deposit_blocks(intent),
                     text=(
-                        f"Escrow deposit {'settled' if result.signed else 'prepared'} "
-                        f"for {listing_hint} — {amount:.2f} USDC"
+                        f"Escrow deposit proposed: {amount:.2f} USDC on "
+                        f"{listing_hint} — awaiting approval"
                     ),
                 )
                 return
@@ -284,6 +306,187 @@ def build_slack_app(
                 ),
                 text="Command failed",
             )
+
+    @app.action("kajota_approve")
+    async def kajota_approve(ack, body, client):
+        await ack()
+        try:
+            actions = body.get("actions") or []
+            intent_id = actions[0].get("value") if actions else None
+            approver_user_id = (body.get("user") or {}).get("id", "unknown")
+            container = body.get("container") or {}
+            channel_id = (
+                container.get("channel_id")
+                or (body.get("channel") or {}).get("id")
+            )
+            original_ts = container.get("message_ts") or (
+                (body.get("message") or {}).get("ts")
+            )
+
+            intent = slack_intents.take(intent_id) if intent_id else None
+            if intent is None:
+                if channel_id and original_ts:
+                    await client.chat_update(
+                        channel=channel_id,
+                        ts=original_ts,
+                        blocks=slack_blocks.error_blocks(
+                            "Intent expired",
+                            "That escrow proposal expired or was already "
+                            "acted on. Re-run `/kajota pay` to try again.",
+                        ),
+                        text="Intent expired",
+                    )
+                return
+
+            # Update the original card — approvers can see the flow
+            # started, buttons disappear so no double-click.
+            if channel_id and original_ts:
+                await client.chat_update(
+                    channel=channel_id,
+                    ts=original_ts,
+                    blocks=slack_blocks.approving_card_blocks(
+                        intent, approver_user_id
+                    ),
+                    text=(
+                        f"Escrow deposit approved for {intent.listing_hint} "
+                        f"— settling on-chain"
+                    ),
+                )
+
+            # Post an anchor message; every progress update lives in
+            # this thread so the channel stays scrollable.
+            anchor = await client.chat_postMessage(
+                channel=intent.channel_id,
+                thread_ts=original_ts,
+                text=(
+                    f":hourglass_flowing_sand: Approve tx starting for "
+                    f"{intent.gross_amount_usdc:.2f} USDC on "
+                    f"{intent.listing_hint}"
+                ),
+                blocks=slack_blocks.progress_blocks(
+                    "USDC.approve", "broadcasting"
+                ),
+            )
+            thread_ts = original_ts or anchor.get("ts")
+
+            # ── Approve tx ──
+            try:
+                approve_tx = await asyncio.to_thread(
+                    send_approve,
+                    listing_hint=intent.listing_hint,
+                    gross_amount_usdc=intent.gross_amount_usdc,
+                )
+            except (MeshConfigError, MeshCallError) as exc:
+                await client.chat_postMessage(
+                    channel=intent.channel_id,
+                    thread_ts=thread_ts,
+                    blocks=slack_blocks.error_blocks(
+                        "Approve tx failed", str(exc)
+                    ),
+                    text="Approve tx failed",
+                )
+                return
+            await client.chat_postMessage(
+                channel=intent.channel_id,
+                thread_ts=thread_ts,
+                blocks=slack_blocks.progress_blocks(
+                    "USDC.approve", "confirmed", approve_tx
+                ),
+                text=f"USDC.approve confirmed {approve_tx.hash[:10]}…",
+            )
+
+            # ── Deposit tx ──
+            await client.chat_postMessage(
+                channel=intent.channel_id,
+                thread_ts=thread_ts,
+                blocks=slack_blocks.progress_blocks(
+                    "CosellEscrow.deposit", "broadcasting"
+                ),
+                text="Deposit tx broadcasting…",
+            )
+            try:
+                deposit_tx = await asyncio.to_thread(
+                    send_deposit,
+                    listing_hint=intent.listing_hint,
+                    gross_amount_usdc=intent.gross_amount_usdc,
+                )
+            except (MeshConfigError, MeshCallError) as exc:
+                await client.chat_postMessage(
+                    channel=intent.channel_id,
+                    thread_ts=thread_ts,
+                    blocks=slack_blocks.error_blocks(
+                        "Deposit tx failed", str(exc)
+                    ),
+                    text="Deposit tx failed",
+                )
+                return
+            await client.chat_postMessage(
+                channel=intent.channel_id,
+                thread_ts=thread_ts,
+                blocks=slack_blocks.progress_blocks(
+                    "CosellEscrow.deposit", "confirmed", deposit_tx
+                ),
+                text=f"CosellEscrow.deposit confirmed {deposit_tx.hash[:10]}…",
+            )
+
+            # Final settled summary in the same thread.
+            await client.chat_postMessage(
+                channel=intent.channel_id,
+                thread_ts=thread_ts,
+                blocks=slack_blocks.settled_summary_blocks(
+                    intent, approve_tx, deposit_tx
+                ),
+                text=(
+                    f"Escrow settled — {intent.gross_amount_usdc:.2f} USDC "
+                    f"locked for {intent.listing_hint}"
+                ),
+            )
+        except Exception as exc:  # noqa: BLE001
+            _LOG.exception("kajota_approve failed")
+            try:
+                await client.chat_postMessage(
+                    channel=body.get("channel", {}).get("id")
+                    or (body.get("container") or {}).get("channel_id"),
+                    blocks=slack_blocks.error_blocks(
+                        "Approval flow crashed",
+                        f"{type(exc).__name__}: {exc}",
+                    ),
+                    text="Approval flow crashed",
+                )
+            except Exception:  # noqa: BLE001
+                pass
+
+    @app.action("kajota_deny")
+    async def kajota_deny(ack, body, client):
+        await ack()
+        try:
+            actions = body.get("actions") or []
+            intent_id = actions[0].get("value") if actions else None
+            denier_user_id = (body.get("user") or {}).get("id", "unknown")
+            container = body.get("container") or {}
+            channel_id = container.get("channel_id") or (
+                (body.get("channel") or {}).get("id")
+            )
+            original_ts = container.get("message_ts") or (
+                (body.get("message") or {}).get("ts")
+            )
+
+            intent = slack_intents.take(intent_id) if intent_id else None
+            if intent is None:
+                return
+            if channel_id and original_ts:
+                await client.chat_update(
+                    channel=channel_id,
+                    ts=original_ts,
+                    blocks=slack_blocks.denied_card_blocks(
+                        intent, denier_user_id
+                    ),
+                    text=(
+                        f"Escrow deposit denied for {intent.listing_hint}"
+                    ),
+                )
+        except Exception as exc:  # noqa: BLE001
+            _LOG.exception("kajota_deny failed")
 
     @app.event("app_mention")
     async def handle_mention(event, say, client):

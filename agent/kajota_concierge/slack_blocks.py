@@ -208,6 +208,178 @@ def deposit_result_blocks(result: Any) -> list[dict[str, Any]]:
     ]
 
 
+def pending_deposit_blocks(intent: Any) -> list[dict[str, Any]]:
+    """Card posted by /kajota pay before broadcasting.
+
+    Shows the pending deposit and two buttons — Approve fires the
+    on-chain send; Deny drops the intent. `intent` is a
+    slack_intents.PendingDeposit.
+    """
+    return [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Escrow deposit — awaiting approval",
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"<@{intent.requested_by_user_id}> proposes to lock "
+                    f"*{intent.gross_amount_usdc:.2f} USDC* in the "
+                    f"CosellEscrow for `{intent.listing_hint}`.\n"
+                    "A workspace teammate should approve before we broadcast."
+                ),
+            },
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"Listing: `{intent.listing_id_display}`  ·  "
+                        f"Chain: Mantle Sepolia (5003)"
+                    ),
+                },
+            ],
+        },
+        {
+            "type": "actions",
+            "block_id": f"kajota_deposit_actions:{intent.intent_id}",
+            "elements": [
+                {
+                    "type": "button",
+                    "action_id": "kajota_approve",
+                    "value": intent.intent_id,
+                    "style": "primary",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Approve + broadcast",
+                    },
+                },
+                {
+                    "type": "button",
+                    "action_id": "kajota_deny",
+                    "value": intent.intent_id,
+                    "style": "danger",
+                    "text": {"type": "plain_text", "text": "Deny"},
+                },
+            ],
+        },
+    ]
+
+
+def approving_card_blocks(intent: Any, approver_user_id: str) -> list[dict[str, Any]]:
+    """Replaces the pending card once someone clicks Approve — no buttons."""
+    return [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Escrow deposit — approved, settling on-chain",
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f":white_check_mark: Approved by <@{approver_user_id}>. "
+                    f"Locking *{intent.gross_amount_usdc:.2f} USDC* on "
+                    f"`{intent.listing_hint}` — see the thread for on-chain "
+                    "receipts as each tx confirms."
+                ),
+            },
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"Requested by <@{intent.requested_by_user_id}>  ·  "
+                        f"Listing: `{intent.listing_id_display}`"
+                    ),
+                },
+            ],
+        },
+    ]
+
+
+def denied_card_blocks(intent: Any, denier_user_id: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "header",
+            "text": {"type": "plain_text", "text": "Escrow deposit — denied"},
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f":no_entry_sign: <@{denier_user_id}> denied the "
+                    f"{intent.gross_amount_usdc:.2f} USDC deposit on "
+                    f"`{intent.listing_hint}`. No on-chain txs were broadcast."
+                ),
+            },
+        },
+    ]
+
+
+def progress_blocks(step: str, status: str, tx: Any | None = None) -> list[dict[str, Any]]:
+    """Threaded progress update. `tx` is a TxReceipt-like object once we have one."""
+    if status == "broadcasting":
+        icon = ":arrows_counterclockwise:"
+        text = f"{icon} *{step}* — broadcasting…"
+    elif status == "confirmed":
+        icon = ":white_check_mark:"
+        url = getattr(tx, "explorer_url", "") or ""
+        h = getattr(tx, "hash", "") or ""
+        short = f"`{h[:10]}…`" if h else ""
+        if url and h:
+            text = f"{icon} *{step}* confirmed — <{url}|{short}>"
+        else:
+            text = f"{icon} *{step}* confirmed"
+    else:
+        text = f"*{step}* — {status}"
+    return [{"type": "section", "text": {"type": "mrkdwn", "text": text}}]
+
+
+def settled_summary_blocks(intent: Any, approve_tx: Any, deposit_tx: Any) -> list[dict[str, Any]]:
+    """Final in-thread receipt summarising the two on-chain txs."""
+    return [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f":lock_with_ink_pen: *Escrow settled* — "
+                    f"{intent.gross_amount_usdc:.2f} USDC locked for "
+                    f"`{intent.listing_hint}`."
+                ),
+            },
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"USDC.approve <{approve_tx.explorer_url}|"
+                        f"`{approve_tx.hash[:10]}…`>  ·  "
+                        f"CosellEscrow.deposit <{deposit_tx.explorer_url}|"
+                        f"`{deposit_tx.hash[:10]}…`>"
+                    ),
+                },
+            ],
+        },
+    ]
+
+
 def error_blocks(title: str, detail: str) -> list[dict[str, Any]]:
     return [
         {
