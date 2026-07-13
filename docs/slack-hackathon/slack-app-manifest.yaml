@@ -1,6 +1,5 @@
 # Paste this at api.slack.com/apps → Create New App → From an app manifest.
-# Replace <YOUR_RENDER_URL> with the URL of the deployed slack service
-# (e.g. https://kajota-concierge-slack.onrender.com).
+# URLs already point at the deployed slack service.
 
 display_information:
   name: Kajota Coach
@@ -24,7 +23,7 @@ features:
     - command: /kajota
       description: Talk to Kajota Coach — watch, status, or pay
       usage_hint: "watch <product> | status | pay <listing> <usdc-amount> | help"
-      url: https://<YOUR_RENDER_URL>/slack/commands/kajota
+      url: https://kajota-concierge-slack.onrender.com/slack/commands/kajota
       should_escape: false
 
 oauth_config:
@@ -40,7 +39,7 @@ oauth_config:
 
 settings:
   event_subscriptions:
-    request_url: https://<YOUR_RENDER_URL>/slack/events
+    request_url: https://kajota-concierge-slack.onrender.com/slack/events
     bot_events:
       - app_mention
       - message.im
