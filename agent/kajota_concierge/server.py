@@ -30,6 +30,7 @@ from pydantic import BaseModel
 
 from kajota_concierge.agent import root_agent
 from kajota_concierge.slack_app import build_slack_app
+from kajota_concierge import mcp_server as kajota_mcp
 
 APP_NAME = "kajota-concierge"
 
@@ -129,7 +130,27 @@ async def banner() -> dict[str, Any]:
         "service": APP_NAME,
         "model": os.environ.get("GEMINI_MODEL", "gemini-2.5-pro"),
         "partners": ["mongodb", "fetch"],
-        "endpoints": ["/chat", "/proactive", "/healthz", "/docs"],
+        "endpoints": [
+            "/chat",
+            "/proactive",
+            "/healthz",
+            "/docs",
+            "/slack/events",
+            "/slack/commands/kajota",
+            "/slack/actions",
+            "/mcp",
+        ],
+        "mcp_server": {
+            "name": "kajota-coach",
+            "url": "/mcp",
+            "tools": [
+                "resolve_listing_id",
+                "propose_escrow",
+                "settle_escrow",
+                "get_status",
+                "add_to_watchlist",
+            ],
+        },
         "docs": "/docs",
     }
 
@@ -252,6 +273,31 @@ if _slack_app is not None:
     @app.post("/slack/actions")
     async def slack_actions(req: Request):
         return await _slack_handler.handle(req)
+
+
+# ─── Kajota Coach as an MCP server ────────────────────────────────
+#
+# The ADK agent CONSUMES MongoDB MCP + Fetch MCP. This mount exposes
+# Coach's own capabilities BACK OUT as an MCP server, reachable at
+# `/mcp` — so Claude Desktop, Cursor, or any downstream MCP client
+# can call watch/status/settle-escrow as tools.
+#
+# The MCP tools need access to the ADK Runner (for get_status and
+# add_to_watchlist), which is defined in this module. Rather than
+# import _run_agent_turn from mcp_server (circular), we bind it here.
+
+kajota_mcp.bind_agent_runner(_run_agent_turn)
+try:
+    _mcp_asgi_app = kajota_mcp.streamable_http_app()
+    app.mount("/mcp", _mcp_asgi_app)
+except Exception as _mcp_mount_err:  # noqa: BLE001
+    # If the mcp SDK version doesn't expose streamable_http_app yet,
+    # skip the mount rather than break the Slack + mobile surfaces.
+    import logging as _logging
+
+    _logging.getLogger("kajota_concierge.server").warning(
+        "MCP server not mounted: %s", _mcp_mount_err
+    )
 
 
 def _summarise_event(event: Any) -> dict[str, Any]:

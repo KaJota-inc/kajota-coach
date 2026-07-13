@@ -34,6 +34,33 @@ Kajota Coach in Slack is one bot that composes three surfaces the co-seller's te
 
 Everything one workspace, one bot, one 3-second slash-command budget met by ack-first / respond-later architecture.
 
+### One agent, three transports — including MCP both ways
+
+Kajota Coach uses MCP twice: as a **client** composing MongoDB MCP + Fetch MCP inside the ADK Runner, AND as a **server** re-exposing its own domain capabilities to the outside world. The FastAPI process mounts an MCP endpoint at `/mcp` (streamable-HTTP transport) offering five tools any MCP client — Claude Desktop, Cursor, another ADK build, or Slack's own Agent Builder runtime — can call:
+
+```
+resolve_listing_id(product_hint)     — on-chain CosellRegistry read
+propose_escrow(hint, amount)         — dry-run, returns listing id + calldata
+settle_escrow(hint, amount)          — signs + broadcasts both txs
+get_status(user_id)                  — proactive agent turn (3 MongoDB reads)
+add_to_watchlist(product, user_id)   — MongoDB insert-one via the agent
+```
+
+Same code paths as the Slack surface — same mesh client, same ADK Runner, same MongoDB MCP. Add Kajota to your Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "kajota-coach": {
+      "transport": "streamable-http",
+      "url": "https://kajota-concierge-slack.onrender.com/mcp"
+    }
+  }
+}
+```
+
+…and you can settle an escrow from Claude too.
+
 ## How we built it
 
 ### Stack — every track requirement met

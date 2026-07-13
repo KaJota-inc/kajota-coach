@@ -15,9 +15,15 @@ dependencies = [
     # `pip install` doesn't surprise us.
     "google-cloud-aiplatform>=1.65.0",
 
-    # MCP Python SDK — provides StdioServerParameters used to launch the
-    # MongoDB MCP server as a subprocess the agent talks to over stdio.
-    "mcp>=1.0.0",
+    # MCP Python SDK — used two ways:
+    #  1. StdioServerParameters to launch the MongoDB MCP + Fetch MCP
+    #     servers as subprocesses the agent talks to over stdio (client
+    #     role).
+    #  2. mcp.server.fastmcp.FastMCP + streamable_http_app() to expose
+    #     Kajota Coach's OWN capabilities as an MCP server under /mcp
+    #     on the FastAPI process (server role). Requires >=1.6 for the
+    #     streamable-http transport.
+    "mcp>=1.6.0",
 
     # Anthropic's reference Fetch MCP server — the agent's second MCP
     # partner. Launched as a Python module (`python -m mcp_server_fetch`)
