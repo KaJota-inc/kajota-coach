@@ -14,7 +14,7 @@
 
 services:
   - type: web
-    name: kajota-concierge-agent
+    name: kajota-coach-okx
     runtime: docker
     rootDir: agent
     plan: free
@@ -104,7 +104,7 @@ services:
   # (SKILL.md at skill/SKILL.md) so downstream OKX.AI agents can settle
   # A2A escrow deals as a second-tier flow beyond the A2MCP paywall.
   - type: web
-    name: kajota-mesh-skill
+    name: kajota-mesh-okx
     runtime: docker
     rootDir: skill
     plan: free
