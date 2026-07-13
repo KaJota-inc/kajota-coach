@@ -2,25 +2,39 @@
 
 **Track:** SME Trade Finance
 **Chain:** Polygon PoS (Amoy testnet)
-**One line:** An invoice-financing rail that lets African micro-SMEs turn
-an unpaid invoice into working capital *today* — with creditworthiness
-scored and anchored on-chain, and repayment settled through a
-smart-contract letter of credit, all in USDC.
+**One line:** On-chain invoice financing for the UAE–Africa trade
+corridor — micro-SMEs turn an unpaid cross-border invoice into instant
+working capital in USDC on Polygon, underwritten by a verifiable
+on-chain trade-credit score, built for DIFC's regulated stablecoin rails.
 
 ---
 
 ## 1. The problem
 
-A micro-SME sells $5,000 of goods on 30-day terms and then waits a month
-to get paid — while rent, restock, and payroll don't wait. Traditional
-invoice financing exists, but it's closed to informal SMEs: no audited
-statements, no credit bureau file, no collateral a bank recognises.
+The UAE moves over **$50B in annual remittances**, and stablecoins
+already make up **51.3% of its crypto activity** — with the world's
+first comprehensive stablecoin regulation now live. Behind those flows
+are real trade relationships: African micro-SMEs importing, sourcing and
+reselling goods, who wait 30–60 days to get paid while rent, restock and
+payroll don't. Traditional invoice financing is closed to them — no
+audited statements, no credit-bureau file, no collateral a bank
+recognises.
 
-Kajota already runs the commerce layer for thousands of these sellers
-(listings, orders, wallet, payments). That gives us the one thing a
-lender can't get anywhere else: **a real, continuous trade history**. The
-missing piece is a rail that turns that history into on-chain credit and
-routes financing trustlessly.
+The capital to fund them exists (diaspora savings, remittance-adjacent
+liquidity, DIFC-based lenders, stablecoin treasuries). The missing piece
+is a way to **underwrite a thin-file SME** and move the money
+trustlessly. Kajota already runs the commerce layer for these sellers
+(listings, orders, wallet, settlement), so we hold the one thing a
+lender can't get anywhere else: **a real, continuous trade history**.
+DIFC's regulatory clarity + Polygon's low-cost USDC rails are the
+launchpad to turn that history into cross-border SME credit.
+
+**Target market:** African micro-merchants trading into and out of the
+UAE/GCC corridor.
+
+**Traction:** [FILL: # active sellers] active sellers · $[FILL: GMV]
+processed · [FILL: waitlist] on the waitlist (waitlist.kajota.io).
+[FILL: pilot LOI / partner financier — delete if none yet.]
 
 ## 2. The solution
 
@@ -31,10 +45,17 @@ contracts, wired into one flow:
    on-chain asset a financier can underwrite.
 2. **On-chain trade-credit score** — Kajota's engine scores the SME from
    its order + repayment history and anchors a verifiable commitment
-   on-chain; a Band-A SME unlocks a 90% advance.
+   on-chain; a Band-A SME unlocks a 90% advance. The score turns an
+   invisible seller into a scored, repayment-tracked counterparty a
+   lender can actually price.
 3. **Smart-contract letter of credit** — the debtor's repayment lands in
    escrow and auto-splits: the financier recovers principal + fee, the
    SME keeps the residual. The debtor can only pay the agreed way.
+
+**Why DIFC + Polygon:** DIFC's live stablecoin regulation makes it
+viable to move real USDC for cross-border SME credit; Polygon makes
+settlement cheap and fast enough to finance a $500 invoice — the ticket
+sizes traditional trade finance ignores.
 
 ## 3. The three track deliverables → contracts
 
@@ -93,7 +114,14 @@ $5.00 invoice, Band-A supplier, 90% advance:
 - **Debtor:** pays the **$5.00** owed, into escrow that can only route it
   the agreed way.
 
-## 7. Business model
+## 7. Liquidity & business model
+
+**Where the money comes from:** financiers are diaspora capital,
+remittance-adjacent liquidity, DIFC-based lenders, and stablecoin
+treasuries. The on-chain trade-credit score is what makes underwriting
+these SMEs possible for the first time; as repayments accrue on-chain,
+each score sharpens — unlocking larger advances and more lenders
+(syndication off the shared, portable score).
 
 - **Take rate** on each financing (a slice of the financier's discount).
 - **Scoring-as-a-service** — the on-chain score is a portable credential
@@ -132,12 +160,14 @@ $5.00 invoice, Band-A supplier, 90% advance:
 
 ## 9. Roadmap
 
-- **Now:** contracts on Amoy, scoring service, end-to-end demo.
-- **Next:** wire the scorer to live Kajota Mongo order history (the
-  Concierge agent already has it); financier marketplace UI in the
-  Kajota mobile app; controller → escrow event automation.
-- **Later:** mainnet Polygon + real Circle USDC; secondary market for
-  tokenized receivables; multi-lender syndication.
+- **Now:** contracts + scoring + live interactive app on Polygon Amoy,
+  with a real on-chain attestation.
+- **Next (DIFC pilot):** one **UAE–Africa corridor** (e.g. UAE–Nigeria)
+  — wire the scorer to live Kajota order history (the Concierge agent
+  already has it), onboard a pilot financier, and run **real USDC
+  advances on Polygon mainnet** within DIFC's regulated environment.
+- **Later:** multi-corridor expansion, a secondary market for tokenized
+  receivables, and multi-lender syndication off the shared on-chain score.
 
 ## 10. Repos
 
