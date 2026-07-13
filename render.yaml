@@ -21,8 +21,8 @@ services:
     branch: hackathon/okx-asp
     region: oregon
 
-    dockerfilePath: agent/Dockerfile
-    dockerContext: agent
+    dockerfilePath: Dockerfile
+    dockerContext: .
 
     healthCheckPath: /healthz
 
@@ -111,8 +111,8 @@ services:
     branch: hackathon/okx-asp
     region: oregon
 
-    dockerfilePath: skill/Dockerfile
-    dockerContext: skill
+    dockerfilePath: Dockerfile
+    dockerContext: .
 
     healthCheckPath: /healthz
 
