@@ -35,9 +35,8 @@ launchpad to turn that history into cross-border SME credit.
 **Target market:** African micro-merchants trading into and out of the
 UAE/GCC corridor.
 
-**Traction:** [FILL: # active sellers] active sellers · $[FILL: GMV]
-processed · [FILL: waitlist] on the waitlist (waitlist.kajota.io).
-[FILL: pilot LOI / partner financier — delete if none yet.]
+**Traction:** hundreds of active micro-sellers on the platform
+(public waitlist at waitlist.kajota.io).
 
 ## 2. The solution
 
@@ -96,7 +95,9 @@ on-chain attestation.**
   raw financials never touch chain. A financier verifies a shown score
   against chain via `ScoreAttestation.verifyPayload`.
 - **Reuse:** the co-sell escrow is already a letter-of-credit engine, so
-  the LoC deliverable is proven code, not a prototype.
+  the LoC deliverable is proven code, not a prototype. It is EVM-identical
+  and Polygon-ready — it runs in the end-to-end lifecycle demo and is live
+  on two testnets today, with mainnet-Polygon deployment in the roadmap.
 
 ## 5. Credit scoring model
 

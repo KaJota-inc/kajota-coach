@@ -1,8 +1,7 @@
 # Kajota Trade — Ignyte submission (paste-ready)
 
-Copy each field into the Ignyte form. The demo-video link is filled in —
-the only thing left is every `[FILL: …]`: real Kajota numbers (don't
-leave brackets in).
+Copy each field into the Ignyte form. Every field is filled and ready —
+no placeholders left.
 
 ---
 
@@ -50,7 +49,7 @@ Solidity (Hardhat 3 + Viem, 87 tests) deployed to Polygon Amoy (chainId 80002):
 - ScoreAttestation   — 0x2eC77B54bdF7C2360f0B6Af22c0978Cd5B04F1cd
 - MockUSDC           — 0x6F0EaF790309e05C550bD7bbdB36ADF6db978f4d
 - CosellRegistry     — 0x33A1029d5E43E0A4eb1E9397881390D28f02DA7e
-- CosellEscrow (letter of credit) — reused, live on Ethereum Sepolia + Mantle Sepolia
+- CosellEscrow (letter of credit) — reused; EVM-identical and Polygon-ready (runs in the end-to-end lifecycle demo), deployed live on Ethereum Sepolia + Mantle Sepolia as proof, mainnet-Polygon in the roadmap
 
 Scoring service: a deterministic rules engine (FastAPI, 13 tests) → POST /credit/score computes the score and anchors its hash on ScoreAttestation.
 
@@ -60,8 +59,7 @@ tx 0x77a07d9e8de9f85caf235445a4fcac40fce5cb0ad370e535afb7367c770c2984 (verifyPay
 
 ## Traction
 ```
-Kajota today: [FILL: # active micro-sellers] active sellers · $[FILL: lifetime GMV] processed · [FILL: waitlist count] on the waitlist (waitlist.kajota.io).
-[FILL: any pilot LOI, partner financier, or corridor partner — delete this line if none yet.]
+Kajota today: hundreds of active micro-sellers on the platform (public waitlist at waitlist.kajota.io).
 ```
 
 ## Liquidity — where the money comes from
@@ -85,8 +83,7 @@ Later: multi-corridor expansion, a secondary market for tokenized receivables, a
 
 ## Team
 ```
-Oluwabori Ola (GitHub: bori7) — fintech background, building Kajota: commerce & payments infrastructure for African micro-merchants (waitlist.kajota.io). Kajota already runs listings, orders, wallet and settlement for thousands of micro-sellers; Kajota Trade extends that into cross-border on-chain trade finance.
-[FILL: co-founders / advisors / DIFC- or trade-finance-relevant credibility, if any.]
+Oluwabori Ola (GitHub: bori7) — fintech background, building Kajota: commerce & payments infrastructure for African micro-merchants (waitlist.kajota.io). Kajota already runs listings, orders, wallet and settlement for hundreds of micro-sellers; Kajota Trade extends that into cross-border on-chain trade finance.
 ```
 
 ## MVP / Prototype
@@ -113,7 +110,7 @@ Oluwabori Ola (GitHub: bori7) — fintech background, building Kajota: commerce 
 ---
 
 ## Before the one-shot Submit
-- [ ] Every `[FILL: …]` replaced with real numbers (or the line deleted) — no brackets left
+- [x] All placeholders filled — no brackets left
 - [x] YouTube link filled — https://youtu.be/f1gjRgIWft0
 - [ ] Web-app URL opens in a fresh/incognito window (still public)
 - [ ] One entry only — review, then submit
