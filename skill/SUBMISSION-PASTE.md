@@ -1,7 +1,8 @@
 # Kajota Trade — Ignyte submission (paste-ready)
 
-Copy each field into the Ignyte form. Two things to fill before you submit:
-`https://youtu.be/f1gjRgIWft0` and every `[FILL: …]` (real Kajota numbers — don't leave brackets in).
+Copy each field into the Ignyte form. The demo-video link is filled in —
+the only thing left is every `[FILL: …]`: real Kajota numbers (don't
+leave brackets in).
 
 ---
 
@@ -113,6 +114,6 @@ Oluwabori Ola (GitHub: bori7) — fintech background, building Kajota: commerce 
 
 ## Before the one-shot Submit
 - [ ] Every `[FILL: …]` replaced with real numbers (or the line deleted) — no brackets left
-- [ ] YouTube link pasted into both `https://youtu.be/f1gjRgIWft0` spots
+- [x] YouTube link filled — https://youtu.be/f1gjRgIWft0
 - [ ] Web-app URL opens in a fresh/incognito window (still public)
 - [ ] One entry only — review, then submit

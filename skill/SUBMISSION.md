@@ -139,6 +139,7 @@ each score sharpens — unlocking larger advances and more lenders
 
 ## 8. What's live
 
+- **Demo video (~70s):** [https://youtu.be/f1gjRgIWft0](https://youtu.be/f1gjRgIWft0)
 - **Live interactive web app:** [https://ignyte-9jyi9cbex-kajotadev-1226s-projects.vercel.app](https://ignyte-9jyi9cbex-kajotadev-1226s-projects.vercel.app)
   — move the sliders to score an SME, and watch the page read the real
   on-chain attestation from Polygon Amoy (verify on PolygonScan).
