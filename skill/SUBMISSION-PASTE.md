@@ -1,7 +1,7 @@
 # Kajota Trade — Ignyte submission (paste-ready)
 
 Copy each field into the Ignyte form. Two things to fill before you submit:
-`<YOUR YOUTUBE LINK>` and every `[FILL: …]` (real Kajota numbers — don't leave brackets in).
+`https://youtu.be/f1gjRgIWft0` and every `[FILL: …]` (real Kajota numbers — don't leave brackets in).
 
 ---
 
@@ -94,7 +94,7 @@ Oluwabori Ola (GitHub: bori7) — fintech background, building Kajota: commerce 
 - Contracts live on Polygon Amoy (addresses above) with a real on-chain credit-score attestation as proof.
 - Full lifecycle runs end-to-end: score → tokenize → finance → escrow repayment → settle, with balance invariants asserted.
 - 87 Solidity tests + 13 Python tests, all passing.
-- Demo video: <YOUR YOUTUBE LINK>
+- Demo video: https://youtu.be/f1gjRgIWft0
 ```
 
 ## Links
@@ -102,7 +102,7 @@ Oluwabori Ola (GitHub: bori7) — fintech background, building Kajota: commerce 
 | Field | Value |
 |---|---|
 | Live web app | https://ignyte-9jyi9cbex-kajotadev-1226s-projects.vercel.app |
-| Demo video | `<YOUR YOUTUBE LINK>` |
+| Demo video | `https://youtu.be/f1gjRgIWft0` |
 | Contracts repo | https://github.com/KaJota-inc/kajota-mesh/tree/hackathon/ignyte-polygon |
 | Scoring service + demo repo | https://github.com/KaJota-inc/kajota-coach/tree/hackathon/ignyte |
 | On-chain proof tx | https://amoy.polygonscan.com/tx/0x77a07d9e8de9f85caf235445a4fcac40fce5cb0ad370e535afb7367c770c2984 |
@@ -113,6 +113,6 @@ Oluwabori Ola (GitHub: bori7) — fintech background, building Kajota: commerce 
 
 ## Before the one-shot Submit
 - [ ] Every `[FILL: …]` replaced with real numbers (or the line deleted) — no brackets left
-- [ ] YouTube link pasted into both `<YOUR YOUTUBE LINK>` spots
+- [ ] YouTube link pasted into both `https://youtu.be/f1gjRgIWft0` spots
 - [ ] Web-app URL opens in a fresh/incognito window (still public)
 - [ ] One entry only — review, then submit
