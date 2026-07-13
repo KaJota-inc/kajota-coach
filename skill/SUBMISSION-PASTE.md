@@ -22,7 +22,7 @@ On-chain invoice financing for the UAE–Africa trade corridor: micro-SMEs turn 
 
 ## Problem + target market
 ```
-The UAE moves over $50B in annual remittances, and stablecoins already make up 51.3% of its crypto activity — with the world's first comprehensive stablecoin regulation now live. Behind those flows are real trade relationships: African micro-SMEs importing, sourcing and reselling goods, who wait 30–60 days to get paid while rent, restock and payroll don't. Traditional invoice financing is closed to them — no audited statements, no credit-bureau file, no collateral a bank recognises.
+The UAE moves over $50B in annual remittances, and stablecoins already make up 51.3% of its crypto activity — with the world's first comprehensive stablecoin regulation now live. Behind those flows are real trade relationships: African micro-SMEs importing, sourcing and reselling goods, who wait 30–60 days to get paid while rent, restock and payroll don't. Traditional invoice financing is closed to them — no audited statements, no credit-bureau file, no collateral a bank recognises. Globally, $2 trillion in trade finance goes unfilled, 40% of SME applications are rejected, and letters of credit still take 7–10 days of manual processing (Jebel Ali alone: 15M+ TEUs a year).
 
 The capital to fund them exists (diaspora savings, remittance-adjacent liquidity, DIFC-based lenders, stablecoin treasuries). The missing piece is a way to underwrite a thin-file SME and move the money trustlessly. Kajota already runs the commerce layer for these sellers — listings, orders, wallet, settlement — so we hold the one thing a lender can't get: a real, continuous trade history. DIFC's regulatory clarity + Polygon's low-cost USDC rails are the launchpad to turn that history into cross-border SME credit.
 
@@ -31,6 +31,8 @@ Target market: African micro-merchants trading into and out of the UAE/GCC corri
 
 ## Solution
 ```
+The track asks for exactly this — tokenized receivables, smart-contract letters of credit, and on-chain trade-credit scoring on Polygon. We built and deployed all three, live on Amoy with a real on-chain attestation.
+
 Kajota Trade adds three on-chain primitives on top of Kajota's live Mesh contracts, wired into one flow on Polygon:
 
 1. Tokenized receivable — the SME registers its unpaid invoice as an on-chain asset a financier can underwrite (ReceivableRegistry).

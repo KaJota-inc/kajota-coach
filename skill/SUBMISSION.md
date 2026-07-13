@@ -18,7 +18,10 @@ are real trade relationships: African micro-SMEs importing, sourcing and
 reselling goods, who wait 30–60 days to get paid while rent, restock and
 payroll don't. Traditional invoice financing is closed to them — no
 audited statements, no credit-bureau file, no collateral a bank
-recognises.
+recognises. Globally, **$2 trillion in trade finance goes unfilled**
+and **40% of SME applications are rejected**; letters of credit still
+take **7–10 days of manual processing** — at Jebel Ali's 15M+ TEUs a
+year, that friction compounds.
 
 The capital to fund them exists (diaspora savings, remittance-adjacent
 liquidity, DIFC-based lenders, stablecoin treasuries). The missing piece
@@ -58,6 +61,11 @@ settlement cheap and fast enough to finance a $500 invoice — the ticket
 sizes traditional trade finance ignores.
 
 ## 3. The three track deliverables → contracts
+
+**The track asked for exactly three things — tokenized receivables,
+smart-contract letters of credit, and on-chain trade-credit scoring on
+Polygon. We built and deployed all three, live on Amoy with a real
+on-chain attestation.**
 
 | Deliverable | Contract | Status |
 |---|---|---|
