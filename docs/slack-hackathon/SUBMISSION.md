@@ -46,20 +46,20 @@ get_status(user_id)                  — proactive agent turn (3 MongoDB reads)
 add_to_watchlist(product, user_id)   — MongoDB insert-one via the agent
 ```
 
-Same code paths as the Slack surface — same mesh client, same ADK Runner, same MongoDB MCP. Add Kajota to your Claude Desktop config:
+Same code paths as the Slack surface — same mesh client, same ADK Runner, same MongoDB MCP. The MCP surface is defined in [`agent/kajota_concierge/mcp_server.py`](https://github.com/KaJota-inc/kajota-coach/blob/hackathon/slack/agent/kajota_concierge/mcp_server.py) using the official MCP Python SDK's `FastMCP`, mounted onto the FastAPI process at `/mcp` alongside the Slack routes. Any streamable-HTTP MCP client (Claude Desktop, Cursor, another ADK) that speaks the transport protocol can pull the tool list and dispatch calls.
+
+The banner at `/` self-describes the MCP surface:
 
 ```json
 {
-  "mcpServers": {
-    "kajota-coach": {
-      "transport": "streamable-http",
-      "url": "https://kajota-concierge-slack.onrender.com/mcp"
-    }
+  "mcp_server": {
+    "name": "kajota-coach",
+    "url": "/mcp",
+    "tools": ["resolve_listing_id", "propose_escrow",
+              "settle_escrow", "get_status", "add_to_watchlist"]
   }
 }
 ```
-
-…and you can settle an escrow from Claude too.
 
 ## How we built it
 
