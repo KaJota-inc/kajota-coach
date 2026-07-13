@@ -118,16 +118,40 @@ def _w3(chain: dict[str, Any]) -> Web3:
     return w3
 
 
-def _to_deposit_id(text: str) -> bytes:
-    """Compact way to derive a deterministic listing id from a demo string.
+def _resolve_listing_id(w3: Web3, chain: dict[str, Any], hint: str) -> bytes:
+    """Look up a real registered listingId by product-id string.
 
-    The real Mesh flow registers listings ahead of time and hands the
-    resulting bytes32 to the buyer. For the Slack demo the /pay command
-    accepts a free-text listing hint (e.g. 'yeezy-hoodie') and we derive
-    a stable bytes32 from it so repeated demo runs address the same
-    listing without touching the registry.
+    The `/kajota pay <hint> <amount>` command accepts a product-id
+    string (e.g. `yeezy-hoodie`). CosellRegistry stores listings under
+    a hash of (productId, wholesaler, coseller), so we can't compute
+    the listingId from just the product id — we query the registry's
+    `listingsForProduct(productId)` and use the first result.
+
+    If the registry has no listing for this productId, we raise a
+    MeshCallError so the Slack card surfaces a clear "listing not
+    registered" message rather than an on-chain revert.
     """
-    return Web3.keccak(text=text.strip().lower())[:32]
+    if os.environ.get("MESH_DEMO_LISTING_ID"):
+        override = os.environ["MESH_DEMO_LISTING_ID"].strip()
+        if override.startswith("0x"):
+            override = override[2:]
+        return bytes.fromhex(override)
+
+    registry = w3.eth.contract(
+        address=Web3.to_checksum_address(chain["registry"]),
+        abi=_load_abi("CosellRegistry.json"),
+    )
+    listings = registry.functions.listingsForProduct(hint).call()
+    if not listings:
+        raise MeshCallError(
+            f"No CosellRegistry listing found for product '{hint}'. "
+            "Register a listing on-chain first, or set "
+            "MESH_DEMO_LISTING_ID to an existing bytes32 listing id."
+        )
+    listing = listings[0]
+    return listing if isinstance(listing, bytes) else bytes.fromhex(
+        listing[2:] if listing.startswith("0x") else listing
+    )
 
 
 def get_chain_info() -> dict[str, Any]:
@@ -241,7 +265,7 @@ def build_deposit(
 
     decimals = usdc.functions.decimals().call()
     gross_amount = int(gross_amount_usdc * (10 ** decimals))
-    listing_id = _to_deposit_id(listing_hint)
+    listing_id = _resolve_listing_id(w3, chain, listing_hint)
 
     acct = _relayer_account()
 
