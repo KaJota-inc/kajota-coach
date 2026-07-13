@@ -44,6 +44,13 @@ _LOG = logging.getLogger("kajota_concierge.mcp")
 
 mcp = FastMCP(
     name="kajota-coach",
+    # stateless_http lets a fresh POST with no session header still get
+    # a valid initialize response. Trades multi-turn session state for
+    # zero-config connectivity — right choice for a demo server where
+    # every /kajota-coach call is a fresh one-shot tool invocation
+    # anyway.
+    stateless_http=True,
+    json_response=True,
     instructions=(
         "Kajota Coach exposes co-selling operations as MCP tools. Use "
         "`get_status` to summarise a merchant's recent activity, "
