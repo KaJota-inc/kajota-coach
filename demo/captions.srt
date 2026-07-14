@@ -1,0 +1,15 @@
+1
+00:00:03,000 --> 00:00:19,000
+ASP #5297  ·  XLayer mainnet
+
+2
+00:00:23,000 --> 00:00:33,000
+402 Payment Required  ·  self-documenting price tag
+
+3
+00:00:36,000 --> 00:01:03,000
+Settlement on XLayer  ·  EIP-3009 authorization  ·  no wallet popup
+
+4
+00:01:05,000 --> 00:01:18,000
+github.com/KaJota-inc/kajota-coach  ·  #OKXAI
