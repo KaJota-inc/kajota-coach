@@ -4,10 +4,10 @@
 # demo video for OKX.AI Genesis.
 #
 # Input beat clips (drop them in this directory before running):
-#   beat1_marketplace.mp4        20s — OKX.AI Coach card (screencap; see vo-script.md)
-#   beat2_402_challenge.mp4      22s — vhs terminal (rendered by beat2_402_challenge.tape)
-#   beat3_settlement.mp4         30s — signing/settlement flow (screencap or vhs)
-#   beat4_asp_identity.mp4       14s — vhs terminal (rendered by beat4_asp_identity.tape) + OKLink cutaway
+#   beat1_marketplace.mp4        20s — OKX.AI Coach card / OKLink XLayer explorer
+#   beat2_402_challenge.mp4      ~14s — vhs terminal
+#   beat3_settlement.mp4         30s — signing/settlement flow slide
+#   beat4_asp_identity.mp4       15s — vhs terminal + OKLink cutaway
 #
 # VO input:
 #   vo-raw.wav        recorded real-voice per vo-script.md
@@ -15,13 +15,11 @@
 # Output:
 #   demo-okx-genesis.mp4         <=90s final, ready for the Google Form
 #
-# Recipe follows [[feedback-demo-video-production]]:
-#   1. Concatenate beat MP4s with the concat demuxer (no re-encode)
-#   2. Re-encode the concatenated stream (H.264, 30 fps, faststart) so
-#      Twitter / OKX Google Form accept it
-#   3. Overlay the VO on the audio track (adelay+amix, so beat clips can
-#      keep any UI sounds they had) — you can skip amix if beats are silent
-#   4. Confirm final duration is under 90.000 seconds
+# Uses the ffmpeg concat FILTER (not demuxer) because our beat clips
+# have mismatched resolutions (PIL slides = 1920x1080 @ 30 fps, vhs
+# terminals = 1440x{480,540} @ 25 fps). The demuxer stream-copies and
+# silently drops frames on mismatch; the filter normalizes each input
+# to 1080p / 30 fps before concatenating.
 
 set -euo pipefail
 
@@ -32,24 +30,27 @@ for f in "${REQ[@]}"; do
     [[ -f "$f" ]] || { echo "missing: $f"; exit 1; }
 done
 
-# 1. Concat list (concat demuxer)
-{
-    echo "file 'beat1_marketplace.mp4'"
-    echo "file 'beat2_402_challenge.mp4'"
-    echo "file 'beat3_settlement.mp4'"
-    echo "file 'beat4_asp_identity.mp4'"
-} > concat.txt
-
-# 2. Concatenate + normalize (30 fps, 1080p canvas, H.264, faststart)
+# Each beat is scaled + padded to 1920x1080 with black bars if the aspect
+# doesn't match, then framerate-normalized to 30 fps, before the concat
+# filter joins them into one 78.88 s video track. The VO is mapped as
+# the sole audio track (beat MP4s are silent by construction).
 ffmpeg -y \
-    -f concat -safe 0 -i concat.txt \
+    -i beat1_marketplace.mp4 \
+    -i beat2_402_challenge.mp4 \
+    -i beat3_settlement.mp4 \
+    -i beat4_asp_identity.mp4 \
     -i vo-raw.wav \
-    -filter_complex "[0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,fps=30[v]; [1:a]adelay=0|0[a]" \
+    -filter_complex "\
+        [0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,fps=30,setsar=1[v0]; \
+        [1:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,fps=30,setsar=1[v1]; \
+        [2:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,fps=30,setsar=1[v2]; \
+        [3:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,fps=30,setsar=1[v3]; \
+        [v0][v1][v2][v3]concat=n=4:v=1:a=0[v]; \
+        [4:a]adelay=0|0[a]" \
     -map "[v]" -map "[a]" \
     -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -profile:v high -level 4.1 -movflags +faststart \
     -c:a aac -b:a 192k -shortest \
     demo-okx-genesis.mp4
 
-# 3. Verify duration <= 90s (Google Form + X thread cap)
 duration=$(ffprobe -v error -show_entries format=duration -of csv=p=0 demo-okx-genesis.mp4)
 awk -v d="$duration" 'BEGIN { if (d > 90.0) { print "FAIL: duration " d "s exceeds 90s cap"; exit 1 } else print "OK: duration " d "s under 90s cap" }'
