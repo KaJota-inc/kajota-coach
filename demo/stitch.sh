@@ -77,8 +77,8 @@ ffmpeg -y -i "$STAGE1" \
     -filter_complex "\
         [0:v][1:v]overlay=x=(W-w)/2:y=H-h-60:enable='between(t,3,19)'[o1]; \
         [o1][2:v]overlay=x=(W-w)/2:y=H-h-60:enable='between(t,23,32)'[o2]; \
-        [o2][3:v]overlay=x=(W-w)/2:y=H-h-60:enable='between(t,36,56)'[o3]; \
-        [o3][4:v]overlay=x=(W-w)/2:y=H-h-60:enable='between(t,59,72)'[v]" \
+        [o2][3:v]overlay=x=(W-w)/2:y=H-h-60:enable='between(t,37,67)'[o3]; \
+        [o3][4:v]overlay=x=(W-w)/2:y=H-h-60:enable='between(t,73,88)'[v]" \
     -map "[v]" -map "0:a" -shortest \
     -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -profile:v high -level 4.1 -movflags +faststart \
     -c:a copy \
