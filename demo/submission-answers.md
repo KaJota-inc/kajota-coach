@@ -7,7 +7,7 @@ into its destination. Deadline: **Thu Jul 17 2026 22:59 UTC**.
 
 ## Fill these in first
 
-- **VIDEO_URL**: `<paste unlisted YouTube link here>`
+- **VIDEO_URL**: `https://youtu.be/Hc1squA5zTM`
 - **X_POST_URL**: `<paste after posting Tweet 1 — the thread root URL>`
 
 ---
@@ -58,7 +58,7 @@ https://github.com/KaJota-inc/kajota-coach/tree/hackathon/okx-asp
 ### Demo video link
 
 ```
-{VIDEO_URL}
+https://youtu.be/Hc1squA5zTM
 ```
 
 ### One-sentence description
