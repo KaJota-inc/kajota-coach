@@ -23,7 +23,7 @@ features:
     - command: /kajota
       description: Talk to Kajota Coach — watch, status, or pay
       usage_hint: "watch <product> | status | pay <listing> <usdc-amount> | help"
-      url: https://kajota-concierge-slack.onrender.com/slack/commands/kajota
+      url: https://kajota-hub.onrender.com/slack/slack/commands/kajota
       should_escape: false
 
 oauth_config:
@@ -39,13 +39,13 @@ oauth_config:
 
 settings:
   event_subscriptions:
-    request_url: https://kajota-concierge-slack.onrender.com/slack/events
+    request_url: https://kajota-hub.onrender.com/slack/slack/events
     bot_events:
       - app_mention
       - message.im
   interactivity:
     is_enabled: true
-    request_url: https://kajota-concierge-slack.onrender.com/slack/actions
+    request_url: https://kajota-hub.onrender.com/slack/slack/actions
   org_deploy_enabled: false
   socket_mode_enabled: false
   token_rotation_enabled: false

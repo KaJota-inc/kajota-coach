@@ -214,4 +214,4 @@ https://github.com/KaJota-inc/kajota-coach/tree/hackathon/slack
 ## Live Slack app
 
 Bot: `@kajota` (installed in the private KAJOTA test workspace — invite on request)
-Deployed agent: `https://kajota-concierge-slack.onrender.com/` — banner at `/` self-describes every mounted surface (`/chat`, `/proactive`, `/slack/events`, `/slack/commands/kajota`, `/slack/actions`, `/mcp`).
+Deployed agent: `https://kajota-hub.onrender.com/slack/` — banner at `/` self-describes every mounted surface (`/chat`, `/proactive`, `/slack/events`, `/slack/commands/kajota`, `/slack/actions`, `/mcp`).
