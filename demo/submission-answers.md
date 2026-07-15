@@ -27,8 +27,8 @@ Kajota Coach
 ### ASP identity (agent id + chain)
 
 ```
-Agent ID 5297 on X Layer mainnet (chainIndex 196). Registered via
-onchainos agent create, tx 0x94acc7c122b93f50452593f74de44e8808f001020e6613cb529f0e34a504fced.
+Agent ID 5855 on X Layer mainnet (chainIndex 196). Registered via
+onchainos agent create, tx 0x53c74e2700ccc3ab3661f34fa7858a1f600bd2c2fe8dc29d7307989be96c0074.
 ```
 
 ### ASP category / track
@@ -64,7 +64,7 @@ https://github.com/KaJota-inc/kajota-coach/tree/hackathon/okx-asp
 ### One-sentence description
 
 ```
-An AI shopping concierge listed on OKX.AI as ASP 5297 that pays for its
+An AI shopping concierge listed on OKX.AI as ASP 5855 that pays for its
 own premium work with HTTP-native micropayments settled on X Layer —
 and escrows real trades on-chain for A2A deals larger than a coffee.
 ```
@@ -92,7 +92,7 @@ Attach the video to Tweet 3 (native upload gives the best autoplay).
 ### Tweet 1 — Intro (260 chars)
 
 ```
-Kajota Coach is live on OKX.AI as ASP 5297 — an Agent Service Provider that answers your shopping questions and pays for its own premium work.
+Kajota Coach is live on OKX.AI as ASP 5855 — an Agent Service Provider that answers your shopping questions and pays for its own premium work.
 
 Every call settles a $0.01 USDC micropayment on X Layer. No wallet popup. No human sign-off.
 
@@ -136,8 +136,8 @@ Judges — every on-chain claim resolves on OKLink X Layer. Full runbook at gith
 - [ ] `demo-okx-genesis.mp4` under 90.000 seconds (stitch.sh gate)
 - [ ] Video plays without login (unlisted YouTube fine; private is not)
 - [ ] `curl -s https://kajota-hub.onrender.com/coach-okx/coach/premium | jq '.accepts[0].network'` still returns `"eip155:195"`
-- [ ] `onchainos agent get-agents --agent-ids 5297` shows the ASP present and not deactivated
+- [ ] `onchainos agent get-agents --agent-ids 5855` shows the ASP present and not deactivated
 - [ ] X thread posted, all four tweets showing, Tweet 3 has video
 - [ ] Google Form filled with real URLs (not `{VIDEO_URL}` placeholders)
 - [ ] Form submitted before Jul 17 22:59 UTC
-- [ ] OKX internal review has responded on ASP 5297 (or if pending, submission still counts as long as the ASP endpoint is publicly reachable)
+- [ ] OKX internal review has responded on ASP 5855 (or if pending, submission still counts as long as the ASP endpoint is publicly reachable)

@@ -54,10 +54,10 @@ start time. `stitch.sh` reads it to align caption pops.
 
 | Time | Text | Position | Style |
 |---|---|---|---|
-| 0:03–0:19 | ASP 5297 · XLayer mainnet | Lower-third | Regular |
+| 0:03–0:19 | ASP 5855 · XLayer mainnet | Lower-third | Regular |
 | 0:23–0:41 | 402 Payment Required · self-documenting price tag | Lower-third | Regular |
 | 0:45–1:11 | Settlement: XLayer · EIP-3009 authorization · no wallet popup | Lower-third | Regular |
-| 1:00–1:11 | tx: 0x94acc7c1…4fced *(placeholder — swap for real payment tx once facilitator wired)* | Center-top | Monospace |
+| 1:00–1:11 | tx: 0x53c74e27…c0074 *(placeholder — swap for real payment tx once facilitator wired)* | Center-top | Monospace |
 | 1:13–1:27 | KajotaInc/kajota-coach · #OKXAI | Center-bottom | Regular |
 
 ---
@@ -65,6 +65,6 @@ start time. `stitch.sh` reads it to align caption pops.
 ## Recording sanity checks before you record
 
 - [ ] Coach `/coach/premium` returns 402 with `network: eip155:195` — `curl -s https://kajota-hub.onrender.com/coach-okx/coach/premium | jq '.accepts[0].network'`
-- [ ] `onchainos agent get-agents --agent-ids 5297` shows `approvalLabel: "Listing under review"` — if it's changed to "approved", pivot Beat 4 to show the public marketplace search result instead
-- [ ] Registration tx `0x94acc7c122b93f50452593f74de44e8808f001020e6613cb529f0e34a504fced` still viewable on OKLink XLayer explorer
+- [ ] `onchainos agent get-agents --agent-ids 5855` shows `approvalLabel: "Listing under review"` — if it's changed to "approved", pivot Beat 4 to show the public marketplace search result instead
+- [ ] Registration tx `0x53c74e2700ccc3ab3661f34fa7858a1f600bd2c2fe8dc29d7307989be96c0074` still viewable on OKLink XLayer explorer
 - [ ] All four beat MP4s exist (`beat1_marketplace.mp4`, `beat2_402_challenge.mp4`, `beat3_settlement.mp4`, `beat4_asp_identity.mp4`) — see `stitch.sh` for expected filenames

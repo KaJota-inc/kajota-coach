@@ -9,7 +9,7 @@ Genesis Hackathon (Jul 8–17, 2026).
 |---|---|
 | `vo-script.md` | 86-second voice-over script, 4 beats, with on-screen text overlay cues and recording sanity checks |
 | `beat2_402_challenge.tape` | `vhs` script for Beat 2 — terminal shows `curl` of `/coach/premium` returning the 402 challenge with `eip155:195` |
-| `beat4_asp_identity.tape` | `vhs` script for Beat 4 — terminal shows `onchainos agent get-agents --agent-ids 5297` output |
+| `beat4_asp_identity.tape` | `vhs` script for Beat 4 — terminal shows `onchainos agent get-agents --agent-ids 5855` output |
 | `stitch.sh` | Concatenates the four beat clips + VO, normalizes to 1080p / 30fps / H.264, verifies duration ≤ 90s |
 | `beat*.mp4` | Rendered beat clips (dropped in here after you record or render them) |
 | `vo-raw.wav` | Voice-over recording (produced by you per vo-script.md) |
@@ -26,7 +26,7 @@ Genesis Hackathon (Jul 8–17, 2026).
    ```
 
 2. **Screen-capture the two visual beats** yourself (macOS: `⌘⇧5` or `simctl io booted recordVideo`):
-   - `beat1_marketplace.mp4` — OKX.AI marketplace / OKLink XLayer explorer showing ASP 5297
+   - `beat1_marketplace.mp4` — OKX.AI marketplace / OKLink XLayer explorer showing ASP 5855
    - `beat3_settlement.mp4` — code + signing flow (fallback: read the vo-script section 3 verbatim over a static "flow diagram" slide)
 
 3. **Record the voice-over** (`vo-raw.wav`) reading `vo-script.md` at conversational pace. QuickTime → Audio Only → export as WAV.

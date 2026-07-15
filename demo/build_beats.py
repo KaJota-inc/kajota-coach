@@ -3,7 +3,7 @@
 ffmpeg.
 
 Every fact on Beat 1 is a verbatim copy of what OKLink X Layer explorer
-showed for tx 0x94acc7c1...4fced (captured Jul 14 2026). Every code
+showed for tx 0x53c74e27…c0074 (captured Jul 14 2026). Every code
 snippet on Beat 3 comes verbatim from agent/kajota_concierge/x402_xlayer.py
 so a judge who wants to verify can grep the repo.
 
@@ -73,14 +73,14 @@ def beat1() -> None:
     _text(d, (100, 120), "OKX.AI Genesis Hackathon · ASP registration", font=small_font, fill=DIM)
 
     # Title
-    _text(d, (100, 220), "ASP 5297 — live on X Layer", font=title_font, fill=FG)
+    _text(d, (100, 220), "ASP 5855 — live on X Layer", font=title_font, fill=FG)
     _text(d, (100, 320), "ERC-8004 identity minted to your Agentic Wallet", font=sub_font, fill=DIM)
 
     # Fact panel
     _panel(d, (100, 420, W - 100, 900))
     rows = [
         ("Chain", "X Layer mainnet · chainId 196"),
-        ("Contract action", "Mint 721 AGENT · 1 Token ID #5297"),
+        ("Contract action", "Mint 721 AGENT · 1 Token ID #5855"),
         ("Recipient", "0x8673c1af74f778da81d8ac1fb3d5e3b79015fcb0"),
         ("Result", "Success · 109,519 blocks confirmed"),
         ("Block · Date", "65172258 · 07/13/2026 12:14:54 UTC"),
@@ -94,7 +94,7 @@ def beat1() -> None:
 
     # Tx hash callout
     _text(d, (100, 940), "Tx", font=label_font, fill=DIM)
-    _text(d, (100, 980), "0x94acc7c122b93f50452593f74de44e8808f001020e6613cb529f0e34a504fced",
+    _text(d, (100, 980), "0x53c74e2700ccc3ab3661f34fa7858a1f600bd2c2fe8dc29d7307989be96c0074",
           font=_font(26, mono=True), fill=ACCENT)
 
     out = HERE / "beat1_marketplace.png"

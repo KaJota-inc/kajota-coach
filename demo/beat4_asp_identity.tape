@@ -1,7 +1,7 @@
 # Beat 4 of the OKX.AI Genesis demo — the on-chain ASP identity.
 #
 # What plays: the operator runs `onchainos agent get-agents --agent-ids
-# 5297` and the CLI prints the live ERC-8004 record on XLayer mainnet —
+# 5855` and the CLI prints the live ERC-8004 record on XLayer mainnet —
 # name, role, approval status, avatar, description. Then jump to OKLink
 # (recorded separately) to show the registration tx.
 #
@@ -20,12 +20,12 @@ Set Theme "Dracula"
 Set TypingSpeed 45ms
 Set Padding 32
 
-Type "onchainos agent get-agents --agent-ids 5297 | jq '.data[0].card'"
+Type "onchainos agent get-agents --agent-ids 5855 | jq '.data[0].card'"
 Sleep 500ms
 Enter
 Sleep 5s
 
-Type "# Kajota Coach — ASP 5297, XLayer mainnet, review passed AI quality check."
+Type "# Kajota Coach — ASP 5855, XLayer mainnet, review passed AI quality check."
 Sleep 500ms
 Enter
 Sleep 3s
