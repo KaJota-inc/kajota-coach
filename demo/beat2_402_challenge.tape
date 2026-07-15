@@ -20,7 +20,7 @@ Set TypingSpeed 45ms
 Set Padding 32
 Set PlaybackSpeed 1.0
 
-Type "curl -s https://kajota-coach-okx.onrender.com/coach/premium | jq '.accepts[0]'"
+Type "curl -s https://kajota-hub.onrender.com/coach-okx/coach/premium | jq '.accepts[0]'"
 Sleep 500ms
 Enter
 Sleep 4s

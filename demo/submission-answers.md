@@ -40,7 +40,7 @@ Revenue Rocket (primary) · Finance Copilot (secondary) · Best Product · Softw
 ### Live ASP endpoint
 
 ```
-https://kajota-coach-okx.onrender.com/coach/premium
+https://kajota-hub.onrender.com/coach-okx/coach/premium
 ```
 
 ### Repo link (GitHub)
@@ -122,7 +122,7 @@ Two services live under one ASP identity: A2MCP pay-per-call + A2A escrow. Two c
 ### Tweet 4 — CTA (240 chars)
 
 ```
-Try it: https://kajota-coach-okx.onrender.com/coach/premium returns a live 402 challenge right now.
+Try it: https://kajota-hub.onrender.com/coach-okx/coach/premium returns a live 402 challenge right now.
 
 Judges — every on-chain claim resolves on OKLink X Layer. Full runbook at github.com/KaJota-inc/kajota-coach/tree/hackathon/okx-asp.
 
@@ -135,7 +135,7 @@ Judges — every on-chain claim resolves on OKLink X Layer. Full runbook at gith
 
 - [ ] `demo-okx-genesis.mp4` under 90.000 seconds (stitch.sh gate)
 - [ ] Video plays without login (unlisted YouTube fine; private is not)
-- [ ] `curl -s https://kajota-coach-okx.onrender.com/coach/premium | jq '.accepts[0].network'` still returns `"eip155:195"`
+- [ ] `curl -s https://kajota-hub.onrender.com/coach-okx/coach/premium | jq '.accepts[0].network'` still returns `"eip155:195"`
 - [ ] `onchainos agent get-agents --agent-ids 5297` shows the ASP present and not deactivated
 - [ ] X thread posted, all four tweets showing, Tweet 3 has video
 - [ ] Google Form filled with real URLs (not `{VIDEO_URL}` placeholders)

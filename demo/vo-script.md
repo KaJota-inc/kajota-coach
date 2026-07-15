@@ -64,7 +64,7 @@ start time. `stitch.sh` reads it to align caption pops.
 
 ## Recording sanity checks before you record
 
-- [ ] Coach `/coach/premium` returns 402 with `network: eip155:195` — `curl -s https://kajota-coach-okx.onrender.com/coach/premium | jq '.accepts[0].network'`
+- [ ] Coach `/coach/premium` returns 402 with `network: eip155:195` — `curl -s https://kajota-hub.onrender.com/coach-okx/coach/premium | jq '.accepts[0].network'`
 - [ ] `onchainos agent get-agents --agent-ids 5297` shows `approvalLabel: "Listing under review"` — if it's changed to "approved", pivot Beat 4 to show the public marketplace search result instead
 - [ ] Registration tx `0x94acc7c122b93f50452593f74de44e8808f001020e6613cb529f0e34a504fced` still viewable on OKLink XLayer explorer
 - [ ] All four beat MP4s exist (`beat1_marketplace.mp4`, `beat2_402_challenge.mp4`, `beat3_settlement.mp4`, `beat4_asp_identity.mp4`) — see `stitch.sh` for expected filenames
