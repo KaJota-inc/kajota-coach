@@ -110,12 +110,14 @@ The Coach API endpoint is **auth-required** server-side, so the app starts with 
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
-<!-- kajota-hub-note -->
-## KaJota infrastructure
 
-Part of the [KaJota](https://github.com/KaJota-inc) project. KaJota's Render web
-services are consolidated onto a single always-on instance —
-**[kajota-hub](https://kajota-hub.onrender.com)** — to stop free-tier
-instance-hour exhaustion. If a service from this repo moved there, its live URL
-is now a path on the hub (e.g. `/coach-okx`, `/mesh-okx`, `/concierge`,
-`/slack`, `/mesh-skill`, `/witness`); see `HUB_MIGRATION.md` where present.
+<!-- kajota-hub-note -->
+## KaJota infrastructure — these services are on the hub
+
+This branch's services are deployed on the consolidated **[kajota-hub](https://kajota-hub.onrender.com)** instance.
+
+- **Concierge agent (live):** https://kajota-hub.onrender.com/concierge — `/chat`, `/proactive`, `/mcp`
+- **Mesh SKILL (live):** https://kajota-hub.onrender.com/mesh-skill
+- Previously standalone at `kajota-concierge-agent` / `kajota-mesh-skill`
+
+See [HUB_MIGRATION.md](HUB_MIGRATION.md) for the full mapping.
