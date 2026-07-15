@@ -8,7 +8,7 @@ into its destination. Deadline: **Thu Jul 17 2026 22:59 UTC**.
 ## Fill these in first
 
 - **VIDEO_URL**: `https://youtu.be/Hc1squA5zTM`
-- **X_POST_URL**: `<paste after posting Tweet 1 — the thread root URL>`
+- **X_POST_URL**: `https://x.com/Oluwabori6/status/2077362406188052957`
 
 ---
 
@@ -52,7 +52,7 @@ https://github.com/KaJota-inc/kajota-coach/tree/hackathon/okx-asp
 ### X post link
 
 ```
-{X_POST_URL}
+https://x.com/Oluwabori6/status/2077362406188052957
 ```
 
 ### Demo video link
