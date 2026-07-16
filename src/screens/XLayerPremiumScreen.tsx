@@ -54,6 +54,8 @@ type Phase =
   | 'settling'
   | 'settled';
 
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
 export default function XLayerPremiumScreen(): React.ReactElement {
   const { user } = usePrivy();
   const { wallets, create: createWallet } = useEmbeddedEthereumWallet();
@@ -65,6 +67,7 @@ export default function XLayerPremiumScreen(): React.ReactElement {
   const [signed, setSigned] = useState<SignedAuthorization | null>(null);
   const [result, setResult] = useState<PremiumResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [demoOverride, setDemoOverride] = useState(false);
 
   const wallet = wallets?.[0];
   const walletAddress = wallet?.address;
@@ -144,6 +147,58 @@ export default function XLayerPremiumScreen(): React.ReactElement {
     }
   }, [createWallet]);
 
+  const onPlayDemo = useCallback(async () => {
+    setDemoOverride(true);
+    setError(null);
+    setPhase('loadingPaywall');
+    const { requirements: reqs, unconfigured: unconf } =
+      await requestXLayerPaywall();
+    setRequirements(reqs);
+    setUnconfigured(unconf);
+    setPhase('paywall');
+    await sleep(2200);
+
+    setPhase('signing');
+    await sleep(1600);
+    const demoFrom = '0x7876c479f68b7f218ca59a4b8c860a4a06350007';
+    const validAfter = '0';
+    const validBefore = String(Math.floor(Date.now() / 1000) + 3600);
+    setSigned({
+      xPayment:
+        'eyJzY2hlbWUiOiJleGFjdCIsIm5ldHdvcmsiOiJlaXAxNTU6MTk2IiwiYXNzZXQiOiIweDFlNGE1OTYzYWJmZDk3NWQ4YzkwMjFjZTQ4MGI0MjE4ODg0OWQ0MWQiLCJhdXRob3JpemF0aW9uIjp7ImZyb20iOiIweDc4NzZjNDc5ZjY4YjdmMjE4Y2E1OWE0YjhjODYwYTRhMDYzNTAwMDciLCJ0byI6IjB4Nzg3NmM0NzlmNjhiN2YyMThjYTU5YTRiOGM4NjBhNGEwNjM1MDAwNyIsInZhbHVlIjoiMTAwMDAiLCJ2YWxpZEFmdGVyIjoiMCIsInZhbGlkQmVmb3JlIjoiMTc1MjcwMDAwMCIsIm5vbmNlIjoiMHg0YTNiMmMxZDllZjc4YTFmNWJkNGM3MjkxYTBmNjM4NGM1YjJkOWU3YWY0YzEwMzk1ODFmNzg2MzJhNGM1YjJkIn0sInNpZ25hdHVyZSI6IjB4MmM3ZjEuLi4ifQ==',
+      message: {
+        from: demoFrom,
+        to: reqs.payTo,
+        value: reqs.maxAmountRequired ?? (reqs as any).amount ?? '10000',
+        validAfter,
+        validBefore,
+        nonce:
+          '0x4a3b2c1d9ef78a1f5bd4c7291a0f6384c5b2d9e7af4c1039581f78632a4c5b2d',
+      },
+      signature:
+        '0x2c7f1a8e93b4c26df58170a3e5c9b2af6e4d1057832b9c48f0e73a15d6b982c14e7c3a86091b45f2d8a739e6c1085b234f792d3ce0a6485b9f210c73e5a4d1c8f1b',
+    });
+    setPhase('signed');
+    await sleep(2600);
+
+    setPhase('settling');
+    await sleep(1600);
+    setResult({
+      sessionId: 'demo-xlayer',
+      response:
+        'Insight: this SKU trends +42% among Lagos co-sellers in Q3. Bundle with charger for the top-decile margin lift; the cross-sell velocity peaks Fri–Sun. Marketplace price band 18,900–24,000 NGN; Coach-recommended list 21,500 NGN.',
+      events: [],
+      settlement: {
+        network: 'eip155:196',
+        transaction:
+          '0xa1b2c3d47e9f80c2be5f1a83d76c94ef2b108a7d6c3e9f10a2b5c8d4e7f9a1b3',
+        payer: demoFrom,
+        settled: true,
+      },
+    });
+    setPhase('settled');
+  }, []);
+
   return (
     <ScrollView
       style={styles.root}
@@ -158,16 +213,23 @@ export default function XLayerPremiumScreen(): React.ReactElement {
         </Text>
       </View>
 
-      {!user && (
+      {!user && !demoOverride && (
         <Panel tone="warn">
           <Text style={styles.panelBody}>
             Sign in first — the premium flow signs with your embedded Privy
             wallet. Head back to Home → Sign In.
           </Text>
+          {__DEV__ && (
+            <PrimaryButton
+              label="▶ Play demo (mock wallet)"
+              onPress={onPlayDemo}
+              icon="play"
+            />
+          )}
         </Panel>
       )}
 
-      {user && !wallet && (
+      {user && !wallet && !demoOverride && (
         <Panel tone="warn">
           <Text style={styles.panelBody}>
             No embedded wallet yet. Tap below to provision one on XLayer
@@ -177,10 +239,10 @@ export default function XLayerPremiumScreen(): React.ReactElement {
         </Panel>
       )}
 
-      {phase === 'idle' && wallet && (
+      {phase === 'idle' && (wallet || demoOverride) && (
         <PrimaryButton
-          label="Unlock — fetch the live 402"
-          onPress={onUnlock}
+          label={demoOverride ? '▶ Play demo again' : 'Unlock — fetch the live 402'}
+          onPress={demoOverride ? onPlayDemo : onUnlock}
           icon="unlock"
         />
       )}

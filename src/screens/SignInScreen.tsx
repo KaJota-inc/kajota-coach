@@ -116,6 +116,26 @@ export default function SignInScreen({ navigation, onSignedIn }: Props) {
           Uses your existing Kajota account (https://kajota.io). The Coach endpoint is auth-required
           server-side.
         </Text>
+
+        {__DEV__ && (
+          <TouchableOpacity
+            style={styles.demoLink}
+            onPress={() => {
+              const demoUser: AuthUser = {
+                id: 'demo',
+                emailAddress: 'demo@kajota.io',
+                firstName: 'Demo',
+                lastName: 'Merchant',
+                fullName: 'Demo Merchant',
+                token: 'demo-token',
+              };
+              onSignedIn(demoUser);
+              navigation.replace('Home');
+            }}
+          >
+            <Text style={styles.demoLinkText}>Demo mode → skip sign-in</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -177,5 +197,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     marginTop: spacing.lg,
     textAlign: 'center',
+  },
+  demoLink: {
+    marginTop: spacing.md,
+    alignSelf: 'center',
+    padding: spacing.sm,
+  },
+  demoLinkText: {
+    color: colors.brand,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
