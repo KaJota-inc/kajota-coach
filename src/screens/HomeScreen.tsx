@@ -118,6 +118,17 @@ export default function HomeScreen({ navigation, user, onSignOut }: Props) {
               Premium Insight (x402 · pay on Casper)
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.ctaSecondary}
+            onPress={() => navigation.navigate('XLayerPremium')}
+          >
+            <Feather color={colors.brand} name="cpu" size={16} />
+            <Text style={styles.ctaSecondaryText}>
+              Premium Insight (x402 · pay on XLayer · OKX.AI ASP 5855)
+            </Text>
+          </TouchableOpacity>
         </LinearGradient>
 
         {/* Pipeline explainer */}

@@ -19,6 +19,7 @@ import { PrivyProvider } from '@privy-io/expo';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import { mantleSepoliaTestnet, sepolia } from 'viem/chains';
+import { defineChain } from 'viem';
 
 import { colors } from '@/constants/colors';
 import { setAuthToken } from '@/services/api';
@@ -28,9 +29,22 @@ import CoachCaptureScreen from '@/screens/CoachCaptureScreen';
 import CoachReviewScreen from '@/screens/CoachReviewScreen';
 import ConciergeScreen from '@/screens/ConciergeScreen';
 import CasperPremiumScreen from '@/screens/CasperPremiumScreen';
+import XLayerPremiumScreen from '@/screens/XLayerPremiumScreen';
 import HomeScreen from '@/screens/HomeScreen';
 import MeshSignScreen from '@/screens/MeshSignScreen';
 import SignInScreen from '@/screens/SignInScreen';
+
+// XLayer mainnet (chain 196) — defined inline since older viem versions
+// don't export it. Matches CAIP-2 eip155:196 that ASP 5855 registered on.
+const xLayerMainnet = defineChain({
+  id: 196,
+  name: 'X Layer',
+  nativeCurrency: { decimals: 18, name: 'OKB', symbol: 'OKB' },
+  rpcUrls: { default: { http: ['https://rpc.xlayer.tech'] } },
+  blockExplorers: {
+    default: { name: 'OKLink', url: 'https://www.oklink.com/x-layer' },
+  },
+});
 import type { AuthUser, RootStackParamList } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -119,6 +133,11 @@ export default function App() {
           name="CasperPremium"
           options={{ headerShown: true, title: 'Premium on Casper', headerTintColor: colors.text }}
         />
+        <Stack.Screen
+          component={XLayerPremiumScreen}
+          name="XLayerPremium"
+          options={{ headerShown: true, title: 'Premium on XLayer', headerTintColor: colors.text }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -137,7 +156,7 @@ export default function App() {
       // Declare both chains the embedded wallet signs on: Ethereum Sepolia
       // (CosellRegistry.register listing) and Mantle Sepolia (ERC-8004
       // ReputationRegistry.giveFeedback — the on-chain agent benchmark).
-      supportedChains={[sepolia, mantleSepoliaTestnet]}
+      supportedChains={[sepolia, mantleSepoliaTestnet, xLayerMainnet]}
     >
       {navStack}
     </PrivyProvider>

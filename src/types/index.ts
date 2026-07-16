@@ -76,6 +76,7 @@ export type RootStackParamList = {
   CoachAgentChat: undefined;
   Concierge: undefined;
   CasperPremium: undefined;
+  XLayerPremium: undefined;
   MeshSign: {
     /** Output of the agent's proposeListingForPublish tool. */
     proposal: ProposeListingForPublishResult;
@@ -228,12 +229,16 @@ export interface CasperPaymentRequirements {
   resource: string;
   description: string;
   mimeType: string;
-  /** "00"-prefixed merchant account-hash. */
+  /** "00"-prefixed merchant account-hash (Casper) or `0x…` EOA (EVM). */
   payTo: string;
   maxTimeoutSeconds: number;
-  /** CEP-18 contract package hash. */
+  /** CEP-18 contract package hash (Casper) or ERC-20 address (EVM). */
   asset: string;
   extra: Record<string, string>;
+  /** EVM/x402-standard price field emitted alongside `amount`. Present on
+   *  the XLayer 402 body; absent on Casper. Optional so the shared type
+   *  works for both networks. */
+  maxAmountRequired?: string;
 }
 
 /** The 402 body the server returns when a premium call is unpaid. */
