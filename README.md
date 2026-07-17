@@ -27,7 +27,7 @@
 The live premium endpoint is x402-gated. A plain request returns the Casper price tag:
 
 ```bash
-curl -s https://kajota-concierge-agent.onrender.com/coach/premium | jq
+curl -s https://kajota-hub.onrender.com/concierge/coach/premium | jq
 # → HTTP 402 with the x402 challenge: price (0.001 KaJota USD), asset, payTo, network, feePayer
 ```
 
@@ -39,7 +39,7 @@ Full step-by-step judge walkthrough (live API, local run, on-chain settlement, m
 - **[agent/CASPER.md](agent/CASPER.md)** — architecture, x402 wire-format findings, flow
 - **[agent/RUNBOOK.md](agent/RUNBOOK.md)** — land a real on-chain settlement yourself
 - **[agent/SUBMISSION.md](agent/SUBMISSION.md)** — full Buildathon write-up
-- **Live API:** `https://kajota-concierge-agent.onrender.com` · **Demo video:** https://youtu.be/fFbvIZV52RA
+- **Live API:** `https://kajota-hub.onrender.com/concierge` · **Demo video:** https://youtu.be/fFbvIZV52RA
 
 ---
 

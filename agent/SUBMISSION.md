@@ -13,12 +13,12 @@ HTTP-native micropayments settled on Casper.
 **Tracks:** Agentic AI · DeFi & Payments
 
 **Links:**
-- **Live API:** https://kajota-concierge-agent.onrender.com/coach/premium — a real
+- **Live API:** https://kajota-hub.onrender.com/concierge/coach/premium — a real
   hosted endpoint. Call it and it answers `402` with a Casper price tag; pay it
   and it settles on-chain and returns an agentic insight.
 - Repo (branch `hackathon/casper`): https://github.com/KaJota-inc/kajota-coach/tree/hackathon/casper
 - PR (the full diff for this Buildathon): https://github.com/KaJota-inc/kajota-coach/pull/3
-- Demo video: https://youtu.be/gI2CNJQU7KE
+- Demo video: https://youtu.be/fFbvIZV52RA
 - Write-up: `agent/CASPER.md` in the repo
 
 ## What's new for this Buildathon
@@ -144,5 +144,5 @@ Concrete next steps on Casper:
 **Links & live product:**
 - Website: https://kajota.io
 - GitHub org: https://github.com/KaJota-inc
-- Live Casper agent API: https://kajota-concierge-agent.onrender.com/coach/premium
-- Demo video: https://youtu.be/gI2CNJQU7KE
+- Live Casper agent API: https://kajota-hub.onrender.com/concierge/coach/premium
+- Demo video: https://youtu.be/fFbvIZV52RA

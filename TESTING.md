@@ -3,7 +3,7 @@
 Step-by-step instructions to verify the MVP on Casper Testnet. No setup required for
 Path A; Paths B–C reproduce the on-chain settlement yourself.
 
-**Submission branch:** `hackathon/casper` · **Live API:** `https://kajota-concierge-agent.onrender.com`
+**Submission branch:** `hackathon/casper` · **Live API:** `https://kajota-hub.onrender.com/concierge`
 · **Demo video:** https://youtu.be/fFbvIZV52RA
 
 ---
@@ -14,7 +14,7 @@ The premium endpoint is gated by the x402 protocol. An unpaid request returns a
 `402` with the Casper price tag:
 
 ```bash
-curl -s https://kajota-concierge-agent.onrender.com/coach/premium | jq
+curl -s https://kajota-hub.onrender.com/concierge/coach/premium | jq
 ```
 
 Expected: **HTTP 402** with an `accepts` array containing:
@@ -27,7 +27,7 @@ Expected: **HTTP 402** with an `accepts` array containing:
 A **GET** on the same URL returns the same challenge plus a human-readable
 `howToPay` block, so the endpoint is self-documenting when opened in a browser.
 
-Health check: `curl -s https://kajota-concierge-agent.onrender.com/healthz` → `{"ok":true,...}`
+Health check: `curl -s https://kajota-hub.onrender.com/concierge/healthz` → `{"ok":true,...}`
 
 ---
 
