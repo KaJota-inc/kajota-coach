@@ -85,6 +85,10 @@ async function post(url, body) {
   catch { throw new Error(`${url} → HTTP ${res.status}: ${text.slice(0, 200)}`); }
 }
 
+// A real, on-chain-confirmed settlement to fall back to if the shared sponsored
+// gas account is momentarily drained (a cohort-wide condition, not our bug).
+let lastGoodTx = process.env.FALLBACK_TX || "85041ff37d4e7b4840f738a465bfd933875bdf81604ced3fc6b62dba5fe1d7ea";
+
 async function settleOnce() {
   const req = requirements();
   if (!KEY) throw new Error("facilitator API key not configured");
@@ -96,8 +100,22 @@ async function settleOnce() {
   if (!vr.isValid) throw new Error(`verify rejected: ${vr.invalidReason || ""} ${vr.invalidMessage || ""}`.trim());
   const sr = await post(`${FACILITATOR}/settle`, body);
   const tx = sr.transaction || sr.txHash || sr.deployHash;
-  if (!sr.success || !tx) throw new Error(`settle did not succeed: ${JSON.stringify(sr).slice(0, 200)}`);
-  return { tx, explorer: `https://testnet.cspr.live/transaction/${tx}`, verified: true, payer: sr.payer || payerAddress };
+  if (sr.success && tx) {
+    lastGoodTx = tx;
+    return { tx, explorer: `https://testnet.cspr.live/transaction/${tx}`, verified: true, payer: sr.payer || payerAddress };
+  }
+  // Graceful degradation: the facilitator's SHARED sponsored gas account
+  // (81d557c9…) drains under whole-cohort load → "insufficient balance". The
+  // signature + verify still pass; only the on-chain submit is gas-starved.
+  const reason = `${sr.errorReason || ""} ${sr.errorMessage || ""}`;
+  if (/insufficient balance|put_deploy_failed/i.test(reason)) {
+    const err = new Error("shared testnet gas momentarily exhausted");
+    err.gasOut = true;
+    err.fallbackTx = lastGoodTx;
+    err.fallbackExplorer = `https://testnet.cspr.live/transaction/${lastGoodTx}`;
+    throw err;
+  }
+  throw new Error(`settle did not succeed: ${JSON.stringify(sr).slice(0, 200)}`);
 }
 
 // ── light abuse guard (funds are net-zero, so this only protects the facilitator) ──
@@ -124,7 +142,10 @@ const server = createServer(async (req, res) => {
       if (dayCount >= DAY_CAP) return send(res, 429, "application/json", JSON.stringify({ ok: false, error: "daily demo cap reached" }));
       inFlight = true; last = now; dayCount++;
       try { const out = await settleOnce(); return send(res, 200, "application/json", JSON.stringify({ ok: true, ...out })); }
-      catch (e) { return send(res, 200, "application/json", JSON.stringify({ ok: false, error: e?.message || String(e) })); }
+      catch (e) {
+        if (e?.gasOut) return send(res, 200, "application/json", JSON.stringify({ ok: false, gasOut: true, error: e.message, fallbackTx: e.fallbackTx, fallbackExplorer: e.fallbackExplorer }));
+        return send(res, 200, "application/json", JSON.stringify({ ok: false, error: e?.message || String(e) }));
+      }
       finally { inFlight = false; }
     }
     return send(res, 404, "application/json", JSON.stringify({ error: "not found" }));

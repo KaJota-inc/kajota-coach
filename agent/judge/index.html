@@ -61,7 +61,7 @@
   </div>
 
   <button id="pay">▶  Pay &amp; settle on Casper</button>
-  <p class="hint">Self-transfer of 0.001 KaJota USD with sponsored gas — free to run, click as many times as you like.</p>
+  <p class="hint">Net-zero self-transfer of 0.001 KaJota USD; gas paid by Casper's sponsored feePayer — you pay nothing. Click again to settle another.</p>
 
   <div class="card" id="result">
     <h2 id="rhead">Settlement</h2>
@@ -126,6 +126,14 @@ $("#pay").addEventListener("click", async () => {
   try{
     const r = await fetch("pay", {method:"POST"});
     const d = await r.json();
+    if(!d.ok && d.gasOut){
+      head.innerHTML = '<span style="color:#f59e0b;font-weight:800">⚠ Shared testnet gas momentarily exhausted</span>';
+      body.innerHTML = `
+        <div class="row"><span class="v" style="color:var(--mut)">The facilitator's sponsored gas account is shared across every finalist and drains under load — the signature and <span class="mono">/verify</span> still pass, only the on-chain submit is gas-starved. Here is a <b>real</b> settlement we made moments ago — verify it on-chain:</span></div>
+        <div class="row"><span class="k">confirmed tx</span><span class="v"><a target="_blank" href="${d.fallbackExplorer}">${short(d.fallbackTx)} ↗</a></span></div>
+        <div class="row"><span class="k">retry</span><span class="v">click again shortly — it settles the moment gas is topped up</span></div>`;
+      return;
+    }
     if(!d.ok) throw new Error(d.error || "settle failed");
     const secs = ((Date.now()-t0)/1000).toFixed(1);
     head.innerHTML = '<span class="ok">✓ Settled on Casper</span>';

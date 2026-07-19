@@ -13,9 +13,9 @@ finalist where the payment is real, not mock.
 
 **`JUDGE_DEMO_URL`** — open it, click **"Pay & settle on Casper"**, and a real
 `transfer_with_authorization` is signed, verified, and written on-chain in front
-of you. A live transaction hash appears with a link to cspr.live. Click as many
-times as you like — each settlement is a net-zero self-transfer with gas paid by
-Casper's sponsored feePayer, so it costs nothing to run.
+of you. A live transaction hash appears with a link to cspr.live. Each settlement
+is a net-zero self-transfer (payer → itself) with gas paid by Casper's sponsored
+feePayer, so it costs you nothing — click again to settle another.
 
 No wallet, no signup, no mock mode. This is the whole x402 loop, live.
 
