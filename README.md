@@ -12,6 +12,8 @@
 
 > **An AI agent that pays for its own premium work.** For the [Casper Agentic Buildathon](https://dorahacks.io/hackathon/casper-agentic-buildathon/), KaJota Coach became a Casper-native economic actor: a premium insight endpoint sits behind an **x402 paywall**, and the agent settles a **CEP-18 micropayment on Casper** to unlock it — no account, no card, no human in the loop.
 
+**▶ Try it live (10 seconds, no install):** **https://kajota-hub.onrender.com/judge** — click "Pay & settle on Casper" and watch a real CEP-18 micropayment settle on-chain in front of you.
+
 **Everything Casper is new on the `hackathon/casper` branch.** Base agent (Gemini + Google ADK + MongoDB/Fetch over MCP) pre-exists; the x402 layer, our deployed CEP-18 token, the client signer, the Casper MCP integration, and the mobile Premium screen are all original for this Buildathon.
 
 ### On-chain proof (Casper Testnet — all live & verifiable on cspr.live)

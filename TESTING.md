@@ -6,6 +6,13 @@ Path A; Paths B–C reproduce the on-chain settlement yourself.
 **Submission branch:** `hackathon/casper` · **Live API:** `https://kajota-hub.onrender.com/concierge`
 · **Demo video:** https://youtu.be/fFbvIZV52RA
 
+## ▶ Fastest path — click to settle live (10 seconds, no install)
+
+Open **https://kajota-hub.onrender.com/judge** and click **"Pay & settle on Casper"**.
+A real CEP-18 `transfer_with_authorization` is signed, verified, and settled on-chain
+in ~10s; a live transaction hash appears with a link to cspr.live. Click again to
+settle another (net-zero self-transfer, gas paid by the sponsored feePayer).
+
 ---
 
 ## Path A — Hit the live x402 paywall (60s, no install)

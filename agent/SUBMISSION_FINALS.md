@@ -1,7 +1,7 @@
 # KaJota Coach — Agentic Commerce on Casper (Final Round)
 
 Paste-ready BUIDL copy for the Casper Agentic Buildathon 2026 **Final Round**.
-Replace `JUDGE_DEMO_URL` once the live demo is deployed.
+Live click-to-settle demo: https://kajota-hub.onrender.com/judge
 
 ---
 
@@ -11,7 +11,7 @@ finalist where the payment is real, not mock.
 
 ## ▶ Try it live — click and watch it settle on Casper (10 seconds)
 
-**`JUDGE_DEMO_URL`** — open it, click **"Pay & settle on Casper"**, and a real
+**`https://kajota-hub.onrender.com/judge`** — open it, click **"Pay & settle on Casper"**, and a real
 `transfer_with_authorization` is signed, verified, and written on-chain in front
 of you. A live transaction hash appears with a link to cspr.live. Each settlement
 is a net-zero self-transfer (payer → itself) with gas paid by Casper's sponsored
@@ -23,7 +23,7 @@ No wallet, no signup, no mock mode. This is the whole x402 loop, live.
 
 1. **See the paywall:** `curl -s https://kajota-hub.onrender.com/concierge/coach/premium`
    → HTTP `402` with a Casper price tag (0.001 KaJota USD, asset, payTo, feePayer).
-2. **Watch it settle:** open `JUDGE_DEMO_URL`, click *Pay & settle* → a real tx hash
+2. **Watch it settle:** open `https://kajota-hub.onrender.com/judge`, click *Pay & settle* → a real tx hash
    appears; click it to open cspr.live and confirm `status: processed`.
 3. **Inspect our CEP-18:** [contract package `354ca0ad…`](https://testnet.cspr.live/contract-package/354ca0ad7ef8c97a02b195a1f39e96908fd3bf20d6ec4255850d05f1784fb404)
    — our own token implementing `transfer_with_authorization`.
@@ -122,7 +122,7 @@ up on-chain so the whole cohort's demos work again.
 4. **Publish `casper-x402-python`** — extract the reference layer as a package.
 
 **Links & live product:**
-- ▶ Live judge demo (click-to-settle): `JUDGE_DEMO_URL`
+- ▶ Live judge demo (click-to-settle): `https://kajota-hub.onrender.com/judge`
 - Live agent API: https://kajota-hub.onrender.com/concierge/coach/premium
 - Repo (`hackathon/casper`): https://github.com/KaJota-inc/kajota-coach/tree/hackathon/casper
 - Demo video: https://youtu.be/fFbvIZV52RA
