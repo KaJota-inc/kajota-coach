@@ -45,3 +45,6 @@ secrets/*/*
 
 # Logs
 *.log
+
+# gas watchdog logs
+agent/scripts/*.log
