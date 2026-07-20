@@ -19,6 +19,13 @@ feePayer, so it costs you nothing — click again to settle another.
 
 No wallet, no signup, no mock mode. This is the whole x402 loop, live.
 
+**And prove the security is real:** the same page has a **"🛡 Try to cheat"**
+button. It signs a valid 0.001 payment, then redirects the recipient *after*
+signing (a prompt-injected / man-in-the-middle agent). The facilitator rejects
+it (`invalid_exact_casper_payto_mismatch`) — the EIP-712 signature binds the
+fields, so funds can't be redirected. Real settlement AND a real rejection, both
+on click.
+
 ## Verify it yourself in 5 steps
 
 1. **See the paywall:** `curl -s https://kajota-hub.onrender.com/concierge/coach/premium`
@@ -45,6 +52,7 @@ ecosystem credits. Here is exactly what is real in this project:
 | Production CSPR.cloud facilitator `/verify` + `/settle` | **REAL** |
 | On-chain settlement transaction (gas by sponsored feePayer) | **REAL** |
 | Settlement from the **live hosted** endpoint (not just local) | **REAL** |
+| Live negative proof — tampered/redirected payment is **rejected** on click | **REAL** |
 | Mock payment mode / stubbed settlement | **none** |
 
 We settle actual value through Casper's own x402 rails. That is the core of the
