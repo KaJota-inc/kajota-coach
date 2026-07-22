@@ -39,6 +39,17 @@ from kajota_concierge.x402_casper import (
     build_payment_requirements,
     require_payment,
 )
+from kajota_concierge.x402_ethereum import (
+    EthereumX402Config,
+    PaymentRequiredError as EthereumPaymentRequiredError,
+    build_payment_requirements as build_eth_payment_requirements,
+    require_payment as require_eth_payment,
+)
+from kajota_concierge.keeperhub_client import (
+    KeeperHubClient,
+    KeeperHubConfig,
+    KeeperHubError,
+)
 
 APP_NAME = "kajota-concierge"
 
@@ -49,6 +60,20 @@ APP_NAME = "kajota-concierge"
 _X402 = X402Config.from_env(
     description="KaJota Coach — premium agentic purchase insight",
 )
+
+# Ethereum x402 paywall for the KeeperHub-driven escrow-release endpoint.
+# Same protocol contract as the Casper paywall above, but settled in USDC
+# via the Coinbase reference facilitator (Base Sepolia by default).
+_ETH_X402 = EthereumX402Config.from_env(
+    description="KaJota Coach — schedule KeeperHub-driven escrow release",
+)
+
+# Thin async client for KeeperHub. Fires a pre-created workflow that
+# calls CosellEscrow.release(depositId) on Ethereum Sepolia via the
+# web3/write-contract action, using the Turnkey keeper wallet we set as
+# the escrow's releaseAuth. Unconfigured on a clean checkout — the
+# handler still runs but returns a 503 explaining what's missing.
+_KEEPERHUB = KeeperHubClient(KeeperHubConfig.from_env())
 
 app = FastAPI(
     title="KaJota Concierge",
@@ -200,6 +225,37 @@ async def _payment_required_handler(
     return exc.response
 
 
+@app.exception_handler(EthereumPaymentRequiredError)
+async def _eth_payment_required_handler(
+    _request: Request, exc: EthereumPaymentRequiredError
+) -> JSONResponse:
+    """Return the 402 the Ethereum x402 gate built (USDC price tag)."""
+    return exc.response
+
+
+class ScheduleReleaseRequest(BaseModel):
+    """Body for POST /escrow/schedule-release.
+
+    ``depositId`` is the bytes32 handle CosellEscrow issued when the
+    buyer deposited. On release, KeeperHub calls
+    ``CosellEscrow.release(depositId)`` on Sepolia; the escrow splits
+    the deposit by the listing's commissionBps.
+    """
+
+    depositId: str
+    userId: str = "demo-user-1"
+    sessionId: str | None = None
+
+
+class ScheduleReleaseResponse(BaseModel):
+    """Combined receipt: the x402 settlement + the KeeperHub release run."""
+
+    sessionId: str | None = None
+    depositId: str
+    settlement: dict[str, Any]
+    keeper: dict[str, Any]
+
+
 @app.get("/")
 async def banner() -> dict[str, Any]:
     return {
@@ -216,9 +272,18 @@ async def banner() -> dict[str, Any]:
             "/chat",
             "/proactive",
             "/coach/premium",
+            "/escrow/schedule-release",
             "/healthz",
             "/docs",
         ],
+        "escrow": {
+            "protocol": "x402",
+            "network": _ETH_X402.network,
+            "asset": _ETH_X402.asset,
+            "facilitator": _ETH_X402.facilitator_url,
+            "keeper": "keeperhub",
+            "keeperConfigured": _KEEPERHUB._cfg.configured,
+        },
         "docs": "/docs",
         "witnessMirror": witness_client.is_enabled(),
     }
@@ -404,6 +469,118 @@ async def coach_premium(req: PremiumRequest, request: Request) -> JSONResponse:
         },
     )
     # Echo the settlement receipt in the standard x402 response header too.
+    return JSONResponse(
+        content=body.model_dump(),
+        headers={
+            "X-PAYMENT-RESPONSE": settlement.response_header(),
+            "Access-Control-Expose-Headers": "X-PAYMENT-RESPONSE",
+        },
+    )
+
+
+@app.get("/escrow/schedule-release")
+async def escrow_schedule_release_info(request: Request) -> JSONResponse:
+    """Discovery-friendly 402 for the KeeperHub-driven release endpoint.
+
+    Mirrors ``/coach/premium``'s pattern: a GET returns the same x402
+    challenge a paying agent would receive on a POST, so a browser (or a
+    judge opening the submission URL) sees the price tag, asset, and
+    network inline instead of a bare 405.
+    """
+    resource = (
+        f"{request.headers.get('x-forwarded-proto') or request.url.scheme}"
+        f"://{request.headers.get('x-forwarded-host') or request.headers.get('host') or request.url.netloc}"
+        f"{request.headers.get('x-forwarded-prefix', '')}"
+        f"{request.url.path}"
+    )
+    requirements = build_eth_payment_requirements(_ETH_X402, resource)
+    body = {
+        "x402Version": 1,
+        "accepts": [requirements],
+        "message": (
+            "x402-paywalled endpoint. POST a JSON body with `depositId` and "
+            "an `X-PAYMENT` header carrying a signed EIP-3009 authorisation "
+            "over the requested USDC. On settlement, the KeeperHub keeper "
+            "calls CosellEscrow.release(depositId) on Sepolia and the "
+            "response returns both the settlement tx and the release tx."
+        ),
+        "howToPay": {
+            "method": "POST",
+            "resource": resource,
+            "priceAtomic": _ETH_X402.max_amount_required,
+            "asset": _ETH_X402.asset,
+            "network": _ETH_X402.network,
+            "facilitator": _ETH_X402.facilitator_url,
+            "configured": _ETH_X402.configured,
+        },
+        "keeper": {
+            "configured": _KEEPERHUB._cfg.configured,
+            "workflowId": _KEEPERHUB._cfg.workflow_id or None,
+        },
+        "docs": "/docs",
+    }
+    header_blob = base64.b64encode(json.dumps(requirements).encode()).decode()
+    return JSONResponse(
+        status_code=402,
+        content=body,
+        headers={
+            "PAYMENT-REQUIRED": header_blob,
+            "Access-Control-Expose-Headers": "PAYMENT-REQUIRED",
+        },
+    )
+
+
+@app.post("/escrow/schedule-release", response_model=ScheduleReleaseResponse)
+async def escrow_schedule_release(
+    req: ScheduleReleaseRequest, request: Request
+) -> JSONResponse:
+    """Pay in USDC via x402; KeeperHub then fires the release on Sepolia.
+
+    The end-to-end agentic-payments-plus-keeper showcase for the
+    KeeperHub Agents Onchain hackathon:
+
+    1. Client (or the Coach agent itself) POSTs with an unsigned body.
+    2. ``require_eth_payment`` raises ``EthereumPaymentRequiredError``
+       (→ 402 with a USDC price tag on the configured network).
+    3. Client retries with a signed ``X-PAYMENT`` header.
+    4. Coinbase's reference facilitator ``/verify``s and ``/settle``s the
+       payment on-chain, and we receive the settlement receipt.
+    5. We fire the pre-created KeeperHub workflow with ``depositId`` as
+       an input; KeeperHub's keeper wallet calls
+       ``CosellEscrow.release(depositId)`` via ``web3/write-contract`` on
+       Sepolia with retry + gas handling handled server-side.
+    6. We poll KeeperHub for the release tx hash and return both
+       receipts (settlement + release) plus the standard
+       ``X-PAYMENT-RESPONSE`` header.
+    """
+    settlement = await require_eth_payment(request, _ETH_X402)
+
+    try:
+        run = await _KEEPERHUB.trigger_release(req.depositId)
+    except KeeperHubError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"keeperhub trigger failed: {exc}",
+        ) from exc
+
+    body = ScheduleReleaseResponse(
+        sessionId=req.sessionId,
+        depositId=req.depositId,
+        settlement={
+            "network": settlement.network,
+            "transaction": settlement.transaction,
+            "payer": settlement.payer,
+            "settled": settlement.success,
+        },
+        keeper={
+            "executionId": run.execution_id,
+            "status": run.status,
+            "releaseTx": run.transaction_hash,
+            "network": run.network,
+            "blockNumber": run.block_number,
+            "error": run.error,
+        },
+    )
     return JSONResponse(
         content=body.model_dump(),
         headers={
