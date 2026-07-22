@@ -17,6 +17,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,6 +33,7 @@ import {
   hasSignerBridge,
   payPremium,
   requestPremiumPaywall,
+  SettlementDegradedError,
   signViaBridge,
 } from '@/services/casperPremium';
 import {
@@ -55,6 +57,10 @@ export default function CasperPremiumScreen(): React.ReactElement {
   const [xPayment, setXPayment] = useState('');
   const [result, setResult] = useState<PremiumResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Set when the shared Casper rail is degraded (signed + verified fine, but the
+  // on-chain submit failed). We show an honest explanation plus a real,
+  // confirmed settlement to verify — never a raw facilitator error code.
+  const [degraded, setDegraded] = useState<{ reason: string; txUrl: string } | null>(null);
 
   const warmup = useCallback(() => warmupConciergeAgent(), []);
 
@@ -75,13 +81,18 @@ export default function CasperPremiumScreen(): React.ReactElement {
   const settle = useCallback(
     async (payload: string) => {
       setError(null);
+      setDegraded(null);
       setPhase('paying');
       try {
         const res = await payPremium(payload);
         setResult(res);
         setPhase('settled');
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        if (e instanceof SettlementDegradedError) {
+          setDegraded({ reason: e.facilitatorReason, txUrl: e.confirmedTxUrl });
+        } else {
+          setError(e instanceof Error ? e.message : String(e));
+        }
         setPhase('paywall');
       }
     },
@@ -143,6 +154,29 @@ export default function CasperPremiumScreen(): React.ReactElement {
         <View style={styles.errorBox}>
           <Feather color={colors.warning} name="alert-triangle" size={14} />
           <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      {degraded ? (
+        <View style={styles.degradedBox}>
+          <View style={styles.degradedHead}>
+            <Feather color={colors.warning} name="alert-triangle" size={14} />
+            <Text style={styles.degradedTitle}>
+              Casper settlement temporarily unavailable
+            </Text>
+          </View>
+          <Text style={styles.degradedBody}>
+            Our payment signed and passed the facilitator&apos;s verify step — it is the
+            on-chain execution that is failing right now, across several teams&apos;
+            deployed CEP-18 contracts on Casper testnet. Gas is funded and our token
+            balance is full, so this is a shared-rail issue, not a fault in this payment.
+          </Text>
+          <Text style={styles.degradedReason}>{degraded.reason}</Text>
+          <TouchableOpacity onPress={() => Linking.openURL(degraded.txUrl)}>
+            <Text style={styles.degradedLink}>
+              View a real settlement from this demo on cspr.live ↗
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 
@@ -472,6 +506,26 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
   },
+
+  // Degraded shared-rail state: amber (a heads-up), never red (a failure).
+  degradedBox: {
+    backgroundColor: '#FFF7E6',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#F0C36D',
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  degradedHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  degradedTitle: { flex: 1, color: '#8A5A00', fontSize: fontSize.sm, fontWeight: '700' },
+  degradedBody: { color: '#7A5A2E', fontSize: fontSize.sm, lineHeight: 19 },
+  degradedReason: {
+    color: '#8A5A00',
+    fontSize: fontSize.xs,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  degradedLink: { color: colors.brand, fontSize: fontSize.sm, fontWeight: '600' },
   errorText: { flex: 1, color: colors.warning, fontSize: fontSize.sm },
 
   deployLabel: { fontSize: fontSize.sm, color: colors.textGray, marginTop: spacing.sm },

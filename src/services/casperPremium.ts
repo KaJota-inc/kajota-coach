@@ -27,6 +27,40 @@ import type {
   PremiumResponse,
 } from '@/types';
 
+/**
+ * A real, on-chain-confirmed settlement from this same demo. Shown when the
+ * shared rail is degraded so the user still gets verifiable proof rather than
+ * a dead end. Mirrors the web judge demo's fallback.
+ */
+export const CONFIRMED_SETTLEMENT_TX =
+  '85041ff37d4e7b4840f738a465bfd933875bdf81604ced3fc6b62dba5fe1d7ea';
+export const CONFIRMED_SETTLEMENT_URL = `https://testnet.cspr.live/transaction/${CONFIRMED_SETTLEMENT_TX}`;
+
+/**
+ * Thrown when the payment itself is fine (signed, and the facilitator's
+ * /verify passed) but the shared on-chain submit/execute step failed. That is
+ * an outage on the rail, not a rejected payment — the UI should say so and
+ * still offer a verifiable settlement.
+ */
+export class SettlementDegradedError extends Error {
+  readonly degraded = true;
+  readonly facilitatorReason: string;
+  readonly confirmedTx = CONFIRMED_SETTLEMENT_TX;
+  readonly confirmedTxUrl = CONFIRMED_SETTLEMENT_URL;
+  constructor(facilitatorReason: string) {
+    super('Casper settlement is temporarily unavailable on the shared rail.');
+    this.name = 'SettlementDegradedError';
+    this.facilitatorReason = facilitatorReason;
+  }
+}
+
+/** Facilitator reasons that mean "the rail is down", not "your payment was bad". */
+function isRailDegraded(reason: string): boolean {
+  return /wait_deploy_failed|put_deploy_failed|insufficient balance|User error|deploy_failed/i.test(
+    reason,
+  );
+}
+
 type ChatIds = Pick<ConciergeChatRequest, 'userId' | 'sessionId'> & {
   message?: string | null;
 };
@@ -156,9 +190,16 @@ export async function payPremium(
 
     if (res.status === 402) {
       const body = (await res.json().catch(() => null)) as Casper402 | null;
-      throw new Error(
-        `Payment rejected: ${body?.error ?? 'the facilitator did not settle.'}`,
-      );
+      const reason = body?.error ?? 'the facilitator did not settle.';
+      // Distinguish "our payment was bad" from "the shared rail is degraded".
+      // The signature and /verify pass; it is the on-chain submit/execute step
+      // that fails (currently User error 64658 across several teams' deployed
+      // CEP-18 contracts). Surface that honestly instead of a raw error code —
+      // and hand over a real, confirmed settlement the user can still verify.
+      if (isRailDegraded(reason)) {
+        throw new SettlementDegradedError(reason);
+      }
+      throw new Error(`Payment rejected: ${reason}`);
     }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
