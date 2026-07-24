@@ -8,6 +8,43 @@
 
 ---
 
+## 🟠 Casper Agentic Buildathon 2026 — `hackathon/casper`
+
+> **An AI agent that pays for its own premium work.** For the [Casper Agentic Buildathon](https://dorahacks.io/hackathon/casper-agentic-buildathon/), KaJota Coach became a Casper-native economic actor: a premium insight endpoint sits behind an **x402 paywall**, and the agent settles a **CEP-18 micropayment on Casper** to unlock it — no account, no card, no human in the loop.
+
+**▶ Try it live (10 seconds, no install):** **https://kajota-hub.onrender.com/judge** — click "Pay & settle on Casper" and watch a real CEP-18 micropayment settle on-chain in front of you.
+
+**Everything Casper is new on the `hackathon/casper` branch.** Base agent (Gemini + Google ADK + MongoDB/Fetch over MCP) pre-exists; the x402 layer, our deployed CEP-18 token, the client signer, the Casper MCP integration, and the mobile Premium screen are all original for this Buildathon.
+
+### On-chain proof (Casper Testnet — all live & verifiable on cspr.live)
+
+| What | Value |
+|---|---|
+| **Our CEP-18 contract** — "KaJota USD", implements `transfer_with_authorization` | package `354ca0ad7ef8c97a02b195a1f39e96908fd3bf20d6ec4255850d05f1784fb404` |
+| **Contract deploy tx** | [`df084784…`](https://testnet.cspr.live/transaction/df0847848800502b1b6919c1ad9a2dc0845c309006382b21ef8ad759d7c4171a) |
+| **x402 settlement tx** — a real agent `transfer_with_authorization`, gas paid by the sponsored feePayer | [`88c4153e…`](https://testnet.cspr.live/transaction/88c4153e211011915b7b7bc2af718ada2b506266512701a7488a80f77a58b4a3) |
+
+### Try it (60 seconds, no install)
+
+The live premium endpoint is x402-gated. A plain request returns the Casper price tag:
+
+```bash
+curl -s https://kajota-hub.onrender.com/concierge/coach/premium | jq
+# → HTTP 402 with the x402 challenge: price (0.001 KaJota USD), asset, payTo, network, feePayer
+```
+
+Full step-by-step judge walkthrough (live API, local run, on-chain settlement, mobile app): **[TESTING.md](TESTING.md)**.
+
+### Casper docs
+
+- **[TESTING.md](TESTING.md)** — step-by-step testing playbook (start here)
+- **[agent/CASPER.md](agent/CASPER.md)** — architecture, x402 wire-format findings, flow
+- **[agent/RUNBOOK.md](agent/RUNBOOK.md)** — land a real on-chain settlement yourself
+- **[agent/SUBMISSION.md](agent/SUBMISSION.md)** — full Buildathon write-up
+- **Live API:** `https://kajota-hub.onrender.com/concierge` · **Demo video:** https://youtu.be/fFbvIZV52RA
+
+---
+
 ## What problem this solves
 
 Across emerging markets, micro-retailers ("co-sellers") buy stock from a wholesaler and resell to their personal network for a markup. Onboarding a single product into a digital marketplace requires:
@@ -110,3 +147,12 @@ The Coach API endpoint is **auth-required** server-side, so the app starts with 
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
+<!-- kajota-hub-note -->
+## KaJota infrastructure
+
+Part of the [KaJota](https://github.com/KaJota-inc) project. KaJota's Render web
+services are consolidated onto a single always-on instance —
+**[kajota-hub](https://kajota-hub.onrender.com)** — to stop free-tier
+instance-hour exhaustion. If a service from this repo moved there, its live URL
+is now a path on the hub (e.g. `/coach-okx`, `/mesh-okx`, `/concierge`,
+`/slack`, `/mesh-skill`, `/witness`); see `HUB_MIGRATION.md` where present.

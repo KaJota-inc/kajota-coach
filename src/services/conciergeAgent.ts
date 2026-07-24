@@ -7,7 +7,7 @@
  * directly so the Rapid Agent hackathon submission can demo the full
  * Gemini + ADK + MCP stack end-to-end inside the app.
  *
- *   Default base URL: https://kajota-concierge-agent.onrender.com
+ *   Default base URL: https://kajota-hub.onrender.com/concierge
  *   Override via app.json → `extra.conciergeAgentBaseUrl`
  *
  * Backend: kajota-coach/agent/kajota_concierge/server.py
@@ -27,7 +27,7 @@ const fromConfig = (
 )?.conciergeAgentBaseUrl;
 
 export const CONCIERGE_AGENT_BASE_URL =
-  fromConfig ?? 'https://kajota-concierge-agent.onrender.com';
+  fromConfig ?? 'https://kajota-hub.onrender.com/concierge';
 
 /**
  * Fire-and-forget GET on `/healthz` to spin Render's free-tier dyno
