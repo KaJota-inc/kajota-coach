@@ -50,6 +50,10 @@ from kajota_concierge.keeperhub_client import (
     KeeperHubConfig,
     KeeperHubError,
 )
+from kajota_concierge.coach_cfo import (
+    ReleaseSignals,
+    evaluate as evaluate_release,
+)
 
 APP_NAME = "kajota-concierge"
 
@@ -256,6 +260,47 @@ class ScheduleReleaseResponse(BaseModel):
     keeper: dict[str, Any]
 
 
+class ShouldReleaseRequest(BaseModel):
+    """Body for POST /coach/should-release.
+
+    The rules engine reads on-chain state in production; for the demo
+    and for testing, callers may override any signal via the request
+    body. Only ``depositId`` is required.
+
+    Defaults reflect the escrow's expected happy path — a held deposit,
+    shipment recorded, buyer confirmed, no dispute, fresh seller. In
+    production, ``_collect_signals`` (below) reads the on-chain state
+    and merges any explicit overrides on top.
+    """
+
+    depositId: str
+    escrowState: str = "held"
+    buyer: str = "0x0000000000000000000000000000000000000000"
+    seller: str = "0x0000000000000000000000000000000000000000"
+    grossAmountRaw: int = 100_000            # 0.10 USDC default
+    listingId: str = "0x" + "00" * 32
+    depositedAt: int | None = None           # None → now - 1h
+    now: int | None = None                   # None → real wall clock
+    buyerConfirmed: bool = True
+    sellerShipped: bool = True
+    activeDispute: bool = False
+    priorSuccessfulReleases: int = 10
+    priorDisputes: int = 0
+    maxAmountRaw: int = 10_000_000_000       # 10 000 USDC cap
+    preferLLM: bool = True
+
+
+class ShouldReleaseResponse(BaseModel):
+    """The Coach CFO's verdict on a proposed release."""
+
+    depositId: str
+    decision: str                            # "release" | "hold" | "reject"
+    why: str
+    narrator: str                            # "llm" | "template"
+    rules: list[dict[str, Any]]
+    signals: dict[str, Any]
+
+
 @app.get("/")
 async def banner() -> dict[str, Any]:
     return {
@@ -272,6 +317,7 @@ async def banner() -> dict[str, Any]:
             "/chat",
             "/proactive",
             "/coach/premium",
+            "/coach/should-release",
             "/escrow/schedule-release",
             "/healthz",
             "/docs",
@@ -587,6 +633,64 @@ async def escrow_schedule_release(
             "X-PAYMENT-RESPONSE": settlement.response_header(),
             "Access-Control-Expose-Headers": "X-PAYMENT-RESPONSE",
         },
+    )
+
+
+@app.post("/coach/should-release", response_model=ShouldReleaseResponse)
+async def coach_should_release(req: ShouldReleaseRequest) -> ShouldReleaseResponse:
+    """Coach as the merchant's autonomous CFO — the AGENT decides.
+
+    Distinct from ``/escrow/schedule-release`` (which is a paywalled
+    relay): this endpoint runs a deterministic rules engine over the
+    deposit's signals and returns one of three verdicts (release / hold
+    / reject) with plain-English reasoning attached. No release fires
+    from this call — it's the decision layer that sits IN FRONT of
+    KeeperHub, not the executor.
+
+    Design invariant: deterministic decides, LLM explains. The narrator
+    (Gemini by default, template fallback when Vertex is unavailable)
+    only gets to describe the verdict; it can never change it. Every
+    rule that ran is returned in ``rules`` so the merchant — or a
+    downstream compliance audit — can see exactly why Coach called it
+    the way it did.
+
+    In production, signals like ``escrowState`` and ``buyer`` are read
+    live from the escrow contract via an RPC eth_call; for the demo
+    and for tests they may be supplied via the request body. This keeps
+    the demo loop tight and the endpoint deterministic across runs.
+    """
+
+    import time as _time
+
+    now = req.now if req.now is not None else int(_time.time())
+    deposited_at = req.depositedAt if req.depositedAt is not None else now - 3600
+
+    signals = ReleaseSignals(
+        deposit_id=req.depositId,
+        escrow_state=req.escrowState,
+        buyer=req.buyer,
+        seller=req.seller,
+        gross_amount_raw=req.grossAmountRaw,
+        listing_id=req.listingId,
+        deposited_at=deposited_at,
+        now=now,
+        buyer_confirmed=req.buyerConfirmed,
+        seller_shipped=req.sellerShipped,
+        active_dispute=req.activeDispute,
+        prior_successful_releases_for_seller=req.priorSuccessfulReleases,
+        prior_disputes_against_seller=req.priorDisputes,
+        max_amount_raw=req.maxAmountRaw,
+    )
+
+    verdict = await evaluate_release(signals, prefer_llm=req.preferLLM)
+
+    return ShouldReleaseResponse(
+        depositId=req.depositId,
+        decision=verdict.decision,
+        why=verdict.why,
+        narrator=verdict.narrator,
+        rules=[r.to_dict() for r in verdict.rules],
+        signals=verdict.signals.to_dict(),
     )
 
 
