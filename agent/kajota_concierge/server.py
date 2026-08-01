@@ -54,6 +54,7 @@ from kajota_concierge.coach_cfo import (
     ReleaseSignals,
     evaluate as evaluate_release,
 )
+from kajota_concierge.coach_auditor import audit_workflow
 
 APP_NAME = "kajota-concierge"
 
@@ -301,6 +302,31 @@ class ShouldReleaseResponse(BaseModel):
     signals: dict[str, Any]
 
 
+class AuditWorkflowRequest(BaseModel):
+    """Body for POST /coach/audit-workflow.
+
+    Either supply ``workflowId`` (Coach fetches the workflow from KH's
+    REST API) or ``workflow`` (raw nodes + edges dict). Supplying
+    ``workflow`` inline is what the console uses so a judge can paste
+    ANY workflow JSON and see the auditor's verdict without needing
+    that workflow to exist inside a KH tenant.
+    """
+
+    workflowId: str | None = None
+    workflow: dict[str, Any] | None = None
+
+
+class AuditWorkflowResponse(BaseModel):
+    """The auditor's report card."""
+
+    passed: bool
+    counts: dict[str, int]
+    issues: list[dict[str, Any]]
+    summary: str
+    actionNodesScanned: int
+    workflowRef: str
+
+
 @app.get("/")
 async def banner() -> dict[str, Any]:
     return {
@@ -318,6 +344,7 @@ async def banner() -> dict[str, Any]:
             "/proactive",
             "/coach/premium",
             "/coach/should-release",
+            "/coach/audit-workflow",
             "/escrow/schedule-release",
             "/healthz",
             "/docs",
@@ -634,6 +661,51 @@ async def escrow_schedule_release(
             "Access-Control-Expose-Headers": "X-PAYMENT-RESPONSE",
         },
     )
+
+
+@app.post("/coach/audit-workflow", response_model=AuditWorkflowResponse)
+async def coach_audit_workflow(req: AuditWorkflowRequest) -> AuditWorkflowResponse:
+    """Static second-opinion audit of a KH `web3/write-contract` workflow.
+
+    Runs the trap catalogue from PR #1857 against the workflow definition:
+
+      * `abiFunction` vs the rejected aliases (`function`, `method`) and
+        the accepted-but-legacy alias `functionName`;
+      * `functionArgs` and `abi` shape (must be JSON-encoded strings,
+        not raw arrays);
+      * `web3Connection` sender routing vs the silently-ignored
+        `integrationId`;
+      * numeric-vs-string `network`;
+      * HTTP-trigger template syntax (`{{@trigger-N:HTTP.x}}` vs the
+        intuitive-but-broken `{{@trigger.body.x}}`).
+
+    Purely diagnostic — nothing signs a tx or writes to KH. Either
+    supply ``workflowId`` (Coach fetches via KH's REST API) or
+    ``workflow`` (raw JSON body) — one is required.
+    """
+    if req.workflow is None and not req.workflowId:
+        raise HTTPException(
+            status_code=400,
+            detail="provide either `workflowId` (Coach fetches) or `workflow` (inline JSON)",
+        )
+
+    workflow: dict[str, Any]
+    workflow_ref: str
+    if req.workflow is not None:
+        workflow = req.workflow
+        workflow_ref = "inline"
+    else:
+        try:
+            workflow = await _KEEPERHUB.get_workflow(req.workflowId or "")
+        except KeeperHubError as exc:
+            raise HTTPException(
+                status_code=503 if "not configured" in str(exc) else 502,
+                detail=f"keeperhub fetch failed: {exc}",
+            ) from exc
+        workflow_ref = req.workflowId or "unknown"
+
+    report = audit_workflow(workflow, workflow_ref=workflow_ref)
+    return AuditWorkflowResponse(**report.to_dict())
 
 
 @app.post("/coach/should-release", response_model=ShouldReleaseResponse)

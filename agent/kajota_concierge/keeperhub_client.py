@@ -107,6 +107,32 @@ class KeeperHubClient:
             "Accept": "application/json",
         }
 
+    async def get_workflow(self, workflow_id: str) -> dict[str, Any]:
+        """Fetch a workflow definition (nodes + edges + config) by id.
+
+        Used by the auditor endpoint — Coach reads the workflow via KH's
+        own REST surface and runs it through the rules engine before the
+        merchant ever fires it. Raises :class:`KeeperHubError` on any
+        non-2xx or empty body.
+        """
+        if not self._cfg.api_key:
+            raise KeeperHubError("KeeperHub client is not configured (KEEPERHUB_API_KEY)")
+        async with httpx.AsyncClient(timeout=self._cfg.timeout_seconds) as client:
+            resp = await client.get(
+                f"{self._cfg.base_url}/api/workflows/{workflow_id}",
+                headers=self._headers(),
+            )
+            if resp.status_code >= 300:
+                raise KeeperHubError(
+                    f"get_workflow HTTP {resp.status_code}: {resp.text[:300]}"
+                )
+            data = resp.json()
+            if not isinstance(data, dict):
+                raise KeeperHubError(
+                    f"unexpected KH workflow response shape: {type(data).__name__}"
+                )
+            return data
+
     async def trigger_release(self, deposit_id: str) -> KeeperExecution:
         """Fire the pre-created release workflow with the given depositId.
 
