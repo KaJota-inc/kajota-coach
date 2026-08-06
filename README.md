@@ -12,10 +12,11 @@ Coach decides which escrowed payments may be released and refuses the ones that 
 
 | module | what it does |
 |---|---|
+<!-- cfo + auditor originate here; triage + tools were written straight into kajota-hub, which is what deploys -->
 | **[`coach_cfo.py`](../../blob/hackathon/keeperhub/agent/kajota_concierge/coach_cfo.py)** | Six-rule release engine → `release` / `hold` / `reject` + narration (15 tests) |
 | **[`coach_auditor.py`](../../blob/hackathon/keeperhub/agent/kajota_concierge/coach_auditor.py)** | Audits a KeeperHub workflow for the traps we fixed upstream (19 tests) |
-| **[`coach_triage.py`](../../blob/hackathon/keeperhub/agent/kajota_concierge/coach_triage.py)** | The one LLM judgement — is a free-text buyer complaint a real dispute? |
-| **[`coach_tools.py`](../../blob/hackathon/keeperhub/agent/kajota_concierge/coach_tools.py)** | Exposes the above as ADK tools so the agent can call them from prose |
+| **[`coach_triage.py`](https://github.com/KaJota-inc/kajota-hub/blob/main/apps/concierge/kajota_concierge/coach_triage.py)** | The one LLM judgement — is a free-text buyer complaint a real dispute? |
+| **[`coach_tools.py`](https://github.com/KaJota-inc/kajota-hub/blob/main/apps/concierge/kajota_concierge/coach_tools.py)** | Exposes the above as ADK tools so the agent can call them from prose |
 
 The safety boundary is structural: triage emits a *classification a rule consumes*, so the model can cause a **hold** or a **reject** and can never cause a **release**.
 
@@ -23,7 +24,7 @@ The safety boundary is structural: triage emits a *classification a rule consume
 - Merged docs PR into KeeperHub: **[KeeperHub/keeperhub#1857](https://github.com/KeeperHub/keeperhub/pull/1857)**
 - Autonomous release on Sepolia: **[0x7d42968f…4d1c215a](https://sepolia.etherscan.io/tx/0x7d42968fffeed4bceeb224c438aeed518aa38bf1c08b3856a9dc82d64d1c215a)**
 
-> Note: the deployed copies of these modules live in [`kajota-hub/apps/concierge/`](https://github.com/KaJota-inc/kajota-hub/tree/main/apps/concierge/kajota_concierge) — that's what serves the live endpoints.
+> The first two originate in this repo; `coach_triage.py` and `coach_tools.py` were written directly into the deploying repo and live only there. All four deployed copies are in [`kajota-hub/apps/concierge/`](https://github.com/KaJota-inc/kajota-hub/tree/main/apps/concierge/kajota_concierge) — that's what serves the live endpoints.
 
 **Runs on the production [Kajota](https://kajota.io) backend** — the same Spring Boot service powering the Kajota mobile app, Atlas Search index, and product catalogue. Kajota Coach is an extension that addresses the dominant onboarding friction for African micro-sellers: typing out long product listings.
 
