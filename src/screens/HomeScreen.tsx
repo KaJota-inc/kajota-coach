@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors, fontSize, radius, spacing } from '@/constants/colors';
+import { useCoachPremium } from '@/hooks/useCoachPremium';
 import type { AuthUser, RootStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'> & {
@@ -46,6 +47,16 @@ const FEATURE_BULLETS: ReadonlyArray<{
 ];
 
 export default function HomeScreen({ navigation, user, onSignOut }: Props) {
+  const { isPremium } = useCoachPremium();
+
+  const openCoachAgent = () => {
+    if (isPremium) {
+      navigation.navigate('CoachAgentChat');
+    } else {
+      navigation.navigate('CoachPremiumPaywall');
+    }
+  };
+
   return (
     <View style={styles.root}>
       <StatusBar style="dark" />
@@ -91,10 +102,12 @@ export default function HomeScreen({ navigation, user, onSignOut }: Props) {
           <TouchableOpacity
             activeOpacity={0.85}
             style={styles.ctaSecondary}
-            onPress={() => navigation.navigate('CoachAgentChat')}
+            onPress={openCoachAgent}
           >
             <Feather color={colors.brand} name="message-square" size={16} />
-            <Text style={styles.ctaSecondaryText}>Chat with Coach Agent (v2 · beta)</Text>
+            <Text style={styles.ctaSecondaryText}>
+              Chat with Coach Agent (v2 · beta){isPremium ? '' : ' · Premium'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity

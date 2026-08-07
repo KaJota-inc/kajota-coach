@@ -25,12 +25,14 @@ import { setAuthToken } from '@/services/api';
 import { loadStoredAuth, signOut as signOutService } from '@/services/auth';
 import CoachAgentChatScreen from '@/screens/CoachAgentChatScreen';
 import CoachCaptureScreen from '@/screens/CoachCaptureScreen';
+import CoachPremiumPaywall from '@/screens/CoachPremiumPaywall';
 import CoachReviewScreen from '@/screens/CoachReviewScreen';
 import ConciergeScreen from '@/screens/ConciergeScreen';
 import CasperPremiumScreen from '@/screens/CasperPremiumScreen';
 import HomeScreen from '@/screens/HomeScreen';
 import MeshSignScreen from '@/screens/MeshSignScreen';
 import SignInScreen from '@/screens/SignInScreen';
+import { initializeRevenueCat } from '@/lib/revenueCat';
 import type { AuthUser, RootStackParamList } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -58,6 +60,9 @@ export default function App() {
         setAuthToken(stored.token);
         setUser(stored);
       }
+      // RC identifies purchases by app-user-id, so log in RC after auth
+      // resolves. Anonymous users still get a stable RC-generated id.
+      await initializeRevenueCat(stored?.id);
       setBootstrapping(false);
     })();
   }, []);
@@ -118,6 +123,11 @@ export default function App() {
           component={CasperPremiumScreen}
           name="CasperPremium"
           options={{ headerShown: true, title: 'Premium on Casper', headerTintColor: colors.text }}
+        />
+        <Stack.Screen
+          component={CoachPremiumPaywall}
+          name="CoachPremiumPaywall"
+          options={{ presentation: 'modal', headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

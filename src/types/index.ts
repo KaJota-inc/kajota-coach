@@ -76,6 +76,7 @@ export type RootStackParamList = {
   CoachAgentChat: undefined;
   Concierge: undefined;
   CasperPremium: undefined;
+  CoachPremiumPaywall: undefined;
   MeshSign: {
     /** Output of the agent's proposeListingForPublish tool. */
     proposal: ProposeListingForPublishResult;
