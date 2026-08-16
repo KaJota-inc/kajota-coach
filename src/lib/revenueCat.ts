@@ -17,7 +17,11 @@ import Purchases, { CustomerInfo, LOG_LEVEL, PurchasesOffering } from 'react-nat
 import Constants from 'expo-constants';
 
 const extra = Constants.expoConfig?.extra as
-  | { revenueCatIosKey?: string; revenueCatAndroidKey?: string }
+  | {
+      revenueCatIosKey?: string;
+      revenueCatAndroidKey?: string;
+      revenueCatOfferingId?: string;
+    }
   | undefined;
 
 export const COACH_PREMIUM_ENTITLEMENT = 'coach_premium';
@@ -68,6 +72,13 @@ export function hasCoachPremium(customerInfo: CustomerInfo | null | undefined): 
 export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
   try {
     const offerings = await Purchases.getOfferings();
+    // Prefer an explicit offering id (set in app.json extra) so this app
+    // stays isolated from any other offerings in the shared RC project.
+    // Falls back to `current` for local dev if the id isn't set.
+    const explicitId = extra?.revenueCatOfferingId;
+    if (explicitId && offerings.all[explicitId]) {
+      return offerings.all[explicitId];
+    }
     return offerings.current ?? null;
   } catch {
     return null;

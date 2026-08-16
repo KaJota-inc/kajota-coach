@@ -50,8 +50,9 @@
       "coachAgentId": 303,
       "conciergeAgentBaseUrl": "http://localhost:8080",
       "casperSignerUrl": "http://localhost:4040/sign",
-      "revenueCatIosKey": "",
-      "revenueCatAndroidKey": ""
+      "revenueCatIosKey": "appl_LAzmsEJvZeJRcMuUOYblWwKJQhz",
+      "revenueCatAndroidKey": "",
+      "revenueCatOfferingId": "coach_default"
     }
   }
 }
