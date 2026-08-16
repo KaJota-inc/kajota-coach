@@ -2,7 +2,7 @@
   "name": "kajota-coach",
   "version": "0.1.0",
   "description": "Kajota Coach — AI co-pilot that drafts a complete co-sell listing from one product photo. Hackathon submission for TechHub Africa + AWS Prompt the Planet.",
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "index.js",
   "private": false,
   "license": "MIT",
   "repository": {
