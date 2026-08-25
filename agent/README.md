@@ -147,3 +147,17 @@ git push origin hackathon/rapid-agent
 | Devpost form | _(fill at submission time)_ |
 
 Deadline: **Jun 11, 2026 2:00 PM PT** (judging Jun 22–Jul 6).
+
+---
+
+## Casper Agentic Buildathon 2026
+
+This branch (`hackathon/casper`) extends the Coach onto **Casper Network**:
+the agent reads on-chain state over the **Casper MCP** server, and
+`POST /coach/premium` is a **pay-per-call** endpoint that settles a CEP-18
+micropayment on Casper via the **x402** protocol. Both are additive — the
+existing Gemini + MongoDB + Fetch agent is untouched.
+
+→ Full write-up, the 402 flow, demo, and tests: **[CASPER.md](CASPER.md)**
+Config template: **[.env.casper.example](.env.casper.example)** ·
+Tracks: Agentic AI + DeFi & Payments · $150K · deadline **Jul 1, 2026**.

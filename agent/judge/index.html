@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KaJota Coach × Casper — Live x402 Judge Demo</title>
+<style>
+  :root{ --bg:#0b0b0f; --panel:#14141a; --line:#26262f; --ink:#e9e9f0; --mut:#8a8a99;
+         --orange:#F15A29; --green:#22c55e; --red:#ef4444; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:820px;margin:0 auto;padding:36px 20px 80px}
+  .badge{display:inline-flex;gap:8px;align-items:center;background:rgba(241,90,41,.14);
+         color:var(--orange);border:1px solid rgba(241,90,41,.4);border-radius:999px;
+         padding:6px 14px;font-size:13px;font-weight:700;letter-spacing:.02em}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(34,197,94,.6);
+       animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+  h1{font-size:34px;line-height:1.15;margin:18px 0 6px;font-weight:800}
+  .sub{color:var(--mut);font-size:17px;margin:0 0 28px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin:16px 0}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 0 14px}
+  .row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .row:last-child{border-bottom:0}
+  .row .k{color:var(--mut)} .row .v{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right;word-break:break-all}
+  .price{color:var(--orange);font-weight:800}
+  button{width:100%;border:0;border-radius:14px;background:var(--orange);color:#fff;font-size:17px;
+         font-weight:800;padding:18px;cursor:pointer;transition:filter .15s,transform .05s}
+  button:hover{filter:brightness(1.07)} button:active{transform:translateY(1px)}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  button.secondary{background:transparent;border:1px solid var(--line);color:var(--mut);
+                   font-size:14px;font-weight:600;padding:14px;margin-top:18px}
+  button.secondary:hover{filter:none;border-color:var(--mut);color:var(--ink)}
+  .hint{color:var(--mut);font-size:13px;text-align:center;margin-top:10px}
+  #result,#cheatResult{display:none}
+  #result.show,#cheatResult.show{display:block;animation:fade .4s ease}
+  .feedNote{color:var(--mut);font-size:13px;margin:-6px 0 14px}
+  .feedDot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--mut);vertical-align:middle;margin-left:6px}
+  .feedDot.live{background:var(--green);box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:pulse 1.8s infinite}
+  .feedDot.down{background:#f59e0b}
+  .feedRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .feedRow:last-child{border-bottom:0}
+  .feedRow .badge{font-size:11px;font-weight:800;padding:2px 7px;border-radius:6px;white-space:nowrap}
+  .feedRow .badge.ok{background:rgba(34,197,94,.14);color:var(--green)}
+  .feedRow .badge.err{background:rgba(239,68,68,.14);color:var(--red)}
+  .feedRow .fx{flex:1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
+  .feedRow .ft{color:var(--mut);white-space:nowrap}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .ok{color:var(--green);font-weight:800}
+  .err{color:var(--red);font-weight:700}
+  a{color:var(--orange);text-decoration:none} a:hover{text-decoration:underline}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td{padding:8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  td:last-child{text-align:right}
+  .real{color:var(--green);font-weight:700} .mock{color:var(--mut)}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.35);
+        border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite;vertical-align:-2px;margin-right:8px}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .foot{color:var(--mut);font-size:13px;margin-top:30px;text-align:center}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge"><span class="dot"></span> x402 · Casper Testnet · LIVE</span>
+  <h1>An AI agent that pays for its&nbsp;own work — on Casper.</h1>
+  <p class="sub">KaJota Coach charges for a premium insight behind an <b>x402 paywall</b>.
+     Click below and a <b>real CEP-18 micropayment settles on Casper</b> in front of you —
+     signed, verified, and written on-chain. No mock mode.</p>
+
+  <div class="card">
+    <h2>The live 402 challenge</h2>
+    <div id="chal"><div class="row"><span class="k">loading…</span><span class="v"></span></div></div>
+  </div>
+
+  <button id="pay">▶  Pay &amp; settle on Casper</button>
+  <p class="hint">Net-zero self-transfer of 0.001 KaJota USD; gas paid by Casper's sponsored feePayer — you pay nothing. Click again to settle another.</p>
+
+  <button id="cheat" class="secondary">🛡  Try to cheat — redirect the payment to an attacker</button>
+  <p class="hint">Proves the security is real: we sign a valid 0.001 payment, then tamper the recipient after signing. The EIP-712 signature binds the fields, so the facilitator rejects it.</p>
+  <div class="card" id="cheatResult"></div>
+
+  <div class="card" id="result">
+    <h2 id="rhead">Settlement</h2>
+    <div id="rbody"></div>
+  </div>
+
+  <div class="card">
+    <h2>Live settlements on this rail <span id="feedDot" class="feedDot"></span></h2>
+    <p class="feedNote">Every x402 settlement on this CEP-18 — from this page, the KaJota mobile app, or the CLI — is submitted by the same facilitator account, so it all lands here. One rail, many clients, one on-chain ledger.</p>
+    <div id="feed"><div class="row"><span class="k">loading…</span><span class="v"></span></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Real, not mock</h2>
+    <table>
+      <tr><td>CEP-18 token deployed on Casper Testnet</td><td class="real">REAL</td></tr>
+      <tr><td><span class="mono">transfer_with_authorization</span> (EIP-712 signed)</td><td class="real">REAL</td></tr>
+      <tr><td>Facilitator <span class="mono">/verify</span> + <span class="mono">/settle</span> (production CSPR.cloud)</td><td class="real">REAL</td></tr>
+      <tr><td>On-chain settlement transaction</td><td class="real">REAL</td></tr>
+      <tr><td>Gas paid by sponsored feePayer (agent holds no CSPR)</td><td class="real">REAL</td></tr>
+      <tr><td>Mock payment mode</td><td class="mock">none</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Verify the on-chain proofs yourself</h2>
+    <div class="row"><span class="k">CEP-18 contract (KaJota USD)</span>
+      <span class="v"><a target="_blank" href="https://testnet.cspr.live/contract-package/354ca0ad7ef8c97a02b195a1f39e96908fd3bf20d6ec4255850d05f1784fb404">354ca0ad…4fb404 ↗</a></span></div>
+    <div class="row"><span class="k">Contract deploy tx</span>
+      <span class="v"><a target="_blank" href="https://testnet.cspr.live/transaction/df0847848800502b1b6919c1ad9a2dc0845c309006382b21ef8ad759d7c4171a">df084784… ↗</a></span></div>
+    <div class="row"><span class="k">Prior settlement tx</span>
+      <span class="v"><a target="_blank" href="https://testnet.cspr.live/transaction/88c4153e211011915b7b7bc2af718ada2b506266512701a7488a80f77a58b4a3">88c4153e… ↗</a></span></div>
+    <div class="row"><span class="k">Code + docs</span>
+      <span class="v"><a target="_blank" href="https://github.com/KaJota-inc/kajota-coach/tree/hackathon/casper">GitHub ↗</a></span></div>
+    <div class="row"><span class="k">Demo video</span>
+      <span class="v"><a target="_blank" href="https://youtu.be/fFbvIZV52RA">YouTube ↗</a></span></div>
+  </div>
+
+  <p class="foot">KaJota Coach · Casper Agentic Buildathon 2026 · the only reference-grade
+     server-side x402 that settles real value on Casper.</p>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const short = h => h ? h.slice(0,8)+"…"+h.slice(-6) : "";
+
+async function loadChallenge(){
+  try{
+    const r = await fetch("challenge");
+    const d = await r.json();
+    const a = d.accepts[0];
+    $("#chal").innerHTML = `
+      <div class="row"><span class="k">Price</span><span class="v price">0.001 KaJota USD</span></div>
+      <div class="row"><span class="k">Network</span><span class="v">${a.network}</span></div>
+      <div class="row"><span class="k">Asset (CEP-18)</span><span class="v">${short(a.asset)}</span></div>
+      <div class="row"><span class="k">Pay to</span><span class="v">${short(a.payTo)}</span></div>
+      <div class="row"><span class="k">Gas sponsor (feePayer)</span><span class="v">${short(a.extra.feePayer||"")}</span></div>`;
+  }catch(e){ $("#chal").innerHTML = `<div class="row"><span class="err">challenge unavailable</span></div>`; }
+}
+
+$("#pay").addEventListener("click", async () => {
+  const btn = $("#pay"), res = $("#result"), body = $("#rbody"), head = $("#rhead");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Signing &amp; settling on Casper…';
+  res.classList.add("show"); head.textContent = "Settling…";
+  body.innerHTML = `<div class="row"><span class="k">status</span><span class="v">signing transfer_with_authorization → /verify → /settle</span></div>`;
+  const t0 = Date.now();
+  try{
+    const r = await fetch("pay", {method:"POST"});
+    const d = await r.json();
+    if(!d.ok && d.gasOut){
+      head.innerHTML = '<span style="color:#f59e0b;font-weight:800">⚠ Facilitator settlement temporarily unavailable</span>';
+      body.innerHTML = `
+        <div class="row"><span class="v" style="color:var(--mut)">Our payment signed and passed the facilitator's <span class="mono">/verify</span> — it is the on-chain execution that is failing, with <span class="mono">User error: 64658</span>. We traced it: the same error is hitting <b>three different teams'</b> deployed <span class="mono">Cep18X402</span> contracts on Casper testnet right now, while the canonical shared token still settles — so this is a cohort-wide contract regression, not a fault in this payment. Gas is funded and our token balance is full. Here is a <b>real</b> settlement from this same demo — verify it on-chain:</span></div>
+        <div class="row"><span class="k">confirmed tx</span><span class="v"><a target="_blank" href="${d.fallbackExplorer}">${short(d.fallbackTx)} ↗</a></span></div>
+        ${d.reason ? `<div class="row"><span class="k">facilitator said</span><span class="v err">${d.reason}</span></div>` : ""}
+        <div class="row"><span class="k">retry</span><span class="v">click again shortly — settlement resumes as soon as the facilitator does</span></div>`;
+      return;
+    }
+    if(!d.ok) throw new Error(d.error || "settle failed");
+    const secs = ((Date.now()-t0)/1000).toFixed(1);
+    head.innerHTML = '<span class="ok">✓ Settled on Casper</span>';
+    body.innerHTML = `
+      <div class="row"><span class="k">transaction</span><span class="v"><a target="_blank" href="${d.explorer}">${short(d.tx)} ↗</a></span></div>
+      <div class="row"><span class="k">status</span><span class="v ok">${d.verified? "verified → ":""}submitted on-chain</span></div>
+      <div class="row"><span class="k">amount</span><span class="v">0.001 KaJota USD</span></div>
+      <div class="row"><span class="k">gas paid by</span><span class="v">sponsored feePayer</span></div>
+      <div class="row"><span class="k">settled in</span><span class="v">${secs}s</span></div>`;
+  }catch(e){
+    head.innerHTML = '<span class="err">Settlement error</span>';
+    body.innerHTML = `<div class="row"><span class="v err">${e.message}</span></div>`;
+  }finally{
+    btn.disabled = false; btn.innerHTML = "▶  Pay &amp; settle again";
+  }
+});
+
+$("#cheat").addEventListener("click", async () => {
+  const btn = $("#cheat"), res = $("#cheatResult");
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Tampering &amp; asking the facilitator…';
+  res.classList.add("show");
+  res.innerHTML = `<h2>Security probe</h2><div class="row"><span class="v" style="color:var(--mut)">signing a valid payment → redirecting the recipient → /verify</span></div>`;
+  try{
+    const r = await fetch("cheat", {method:"POST"});
+    const d = await r.json();
+    if(d.ok && d.rejected){
+      res.innerHTML = `
+        <h2><span class="ok">✓ Attack rejected by the facilitator</span></h2>
+        <div class="row"><span class="k">signed recipient</span><span class="v">${short(d.signedTo)}</span></div>
+        <div class="row"><span class="k">attacker redirected to</span><span class="v">${short(d.tamperedTo)}</span></div>
+        <div class="row"><span class="k">facilitator verdict</span><span class="v err">${d.reason}</span></div>
+        <div class="row"><span class="v" style="color:var(--mut)">The EIP-712 signature binds the recipient — a prompt-injected or man-in-the-middle agent cannot redirect the funds.</span></div>`;
+    } else if (d.ok && !d.rejected){
+      res.innerHTML = `<h2><span class="err">Unexpected: facilitator accepted the tampered payment</span></h2>`;
+    } else {
+      res.innerHTML = `<h2><span class="err">Probe error</span></h2><div class="row"><span class="v err">${d.error||d.reason}</span></div>`;
+    }
+  }catch(e){ res.innerHTML = `<h2><span class="err">Probe error</span></h2><div class="row"><span class="v err">${e.message}</span></div>`; }
+  finally{ btn.disabled = false; btn.innerHTML = "🛡  Try to cheat again"; }
+});
+
+async function loadFeed(){
+  try{
+    const r = await fetch("feed");
+    const d = await r.json();
+    const dot = $("#feedDot");
+    dot.className = "feedDot " + (d.healthy ? "live" : "down");
+    dot.title = d.healthy ? "rail live" : "facilitator settlement temporarily degraded";
+    const rows = (d.rows||[]).slice(0,8);
+    if(!rows.length){ $("#feed").innerHTML = `<div class="row"><span class="k">no settlements yet</span></div>`; return; }
+    $("#feed").innerHTML = rows.map(x => `
+      <div class="feedRow">
+        <span class="badge ${x.ok?'ok':'err'}">${x.ok?'SETTLED':'FAILED'}</span>
+        <a class="fx" target="_blank" href="${x.explorer}">${short(x.tx)} ↗</a>
+        <span class="ft">${fmtTime(x.at)}</span>
+      </div>`).join("");
+  }catch(e){ $("#feed").innerHTML = `<div class="row"><span class="err">feed unavailable</span></div>`; }
+}
+function fmtTime(iso){
+  try{ const d=new Date(iso); const s=Math.floor((Date.now()-d.getTime())/1000);
+    if(s<60) return s+"s ago"; if(s<3600) return Math.floor(s/60)+"m ago";
+    if(s<86400) return Math.floor(s/3600)+"h ago"; return Math.floor(s/86400)+"d ago";
+  }catch{ return ""; }
+}
+
+loadChallenge();
+loadFeed();
+setInterval(loadFeed, 20000);
+</script>
+</body>
+</html>

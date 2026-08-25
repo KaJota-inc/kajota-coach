@@ -14,8 +14,12 @@ dist/
 
 # venv
 .venv/
+.venv-*/
 venv/
 env/
+
+# Casper env (never commit the sponsored key)
+.env.casper
 
 # Env files — agent-local copies live here. Real values stay out of git;
 # the templates live in the repo root (.env.rapid-agent.example).

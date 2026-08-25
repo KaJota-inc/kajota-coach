@@ -46,7 +46,9 @@
       "mantleExplorerUrl": "https://explorer.sepolia.mantle.xyz",
       "erc8004IdentityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
       "erc8004ReputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
-      "coachAgentId": 303
+      "coachAgentId": 303,
+      "conciergeAgentBaseUrl": "https://kajota-hub.onrender.com/concierge",
+      "casperSignerUrl": "http://localhost:4040/sign"
     }
   }
 }

@@ -107,6 +107,17 @@ export default function HomeScreen({ navigation, user, onSignOut }: Props) {
               Try KaJota Concierge (Gemini · ADK · MongoDB MCP)
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.ctaSecondary}
+            onPress={() => navigation.navigate('CasperPremium')}
+          >
+            <Feather color={colors.brand} name="zap" size={16} />
+            <Text style={styles.ctaSecondaryText}>
+              Premium Insight (x402 · pay on Casper)
+            </Text>
+          </TouchableOpacity>
         </LinearGradient>
 
         {/* Pipeline explainer */}

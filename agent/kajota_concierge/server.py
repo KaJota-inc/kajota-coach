@@ -18,19 +18,36 @@ MongoDB.
 
 from __future__ import annotations
 
+import base64
+import json
 import os
 import uuid
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types as gen_types
 from pydantic import BaseModel
 
 from kajota_concierge.agent import root_agent
+from kajota_concierge.x402_casper import (
+    PaymentRequiredError,
+    X402Config,
+    build_payment_requirements,
+    require_payment,
+)
 
 APP_NAME = "kajota-concierge"
+
+# x402 paywall config for the premium endpoint. Resolved once from the
+# environment at import; `configured` is False on a clean checkout (no
+# sponsored CSPR.cloud key), in which case /coach/premium still answers 402
+# but explains what's missing rather than charging.
+_X402 = X402Config.from_env(
+    description="KaJota Coach — premium agentic purchase insight",
+)
 
 app = FastAPI(
     title="KaJota Concierge",
@@ -71,12 +88,37 @@ class ProactiveRequest(BaseModel):
     sessionId: str | None = None
 
 
+class PremiumRequest(BaseModel):
+    """Body for POST /coach/premium — the x402-gated insight endpoint.
+
+    Same shape as a chat turn, but the caller must attach a settled Casper
+    x402 payment (``X-PAYMENT`` header) for the request to run. ``message``
+    is optional: with none, the agent produces a full proactive deep-dive.
+    """
+
+    message: str | None = None
+    userId: str = "demo-user-1"
+    sessionId: str | None = None
+
+
 class ChatResponse(BaseModel):
     sessionId: str
     response: str
     # The full event trace from this turn — useful for the demo recording
     # so we can show MCP tool calls inline in the video.
     events: list[dict[str, Any]]
+
+
+class PremiumResponse(ChatResponse):
+    """A ChatResponse plus the on-chain settlement receipt.
+
+    ``settlement`` carries the Casper deploy hash the facilitator produced
+    when it settled the CEP-18 micropayment — the verifiable proof that this
+    agent turn was paid for on-chain. Also surfaced in the
+    ``X-PAYMENT-RESPONSE`` header per the x402 standard.
+    """
+
+    settlement: dict[str, Any]
 
 
 # The system-instructed greeter prompt. Lives here (not in agent.py)
@@ -122,13 +164,60 @@ _PROACTIVE_PROMPT = (
 )
 
 
+# The premium deep-dive prompt handed to the agent on a paid /coach/premium
+# turn with no explicit message. Richer than /proactive: we ask for a
+# multi-query analysis that justifies the micropayment — spend trend,
+# wishlist price-drop opportunities, and a concrete next-buy recommendation
+# with reasoning. Same anti-hallucination discipline as the proactive prompt.
+_PREMIUM_PROMPT = (
+    "Produce a PREMIUM purchase insight for the user. This is a paid, "
+    "deep-dive analysis, so be thorough and ground every claim in data.\n"
+    "\n"
+    "BEFORE writing any text, call the MongoDB tools to gather:\n"
+    "  1. ALL of the user's `purchases` (find by userId, sorted "
+    "     `orderedAt: -1`). Use these to summarise total spend and the "
+    "     dominant category.\n"
+    "  2. The full `wishlist` (find by userId). Flag any item whose "
+    "     `currentPriceQuote` is at or below its `targetPriceQuote` — those "
+    "     are buy-now opportunities.\n"
+    "  3. `products` in the user's dominant category (find, limit 5) to pick "
+    "     ONE specific recommendation they don't already own.\n"
+    "\n"
+    "Then write a 3-4 sentence insight: their spending pattern, any wishlist "
+    "price opportunity, and the single best next purchase with a one-line "
+    "reason. Cite exact item names and prices verbatim; the `quoteSymbol` is "
+    "`NGNT`. Never fabricate. End with the standard [CARDS] block (one card "
+    "for the recommendation, one per buy-now wishlist hit, max 3 cards)."
+)
+
+
+@app.exception_handler(PaymentRequiredError)
+async def _payment_required_handler(
+    _request: Request, exc: PaymentRequiredError
+) -> JSONResponse:
+    """Return the 402 the x402 gate built (price tag in body + header)."""
+    return exc.response
+
+
 @app.get("/")
 async def banner() -> dict[str, Any]:
     return {
         "service": APP_NAME,
         "model": os.environ.get("GEMINI_MODEL", "gemini-2.5-pro"),
         "partners": ["mongodb", "fetch"],
-        "endpoints": ["/chat", "/proactive", "/healthz", "/docs"],
+        "payments": {
+            "protocol": "x402",
+            "network": _X402.network,
+            "facilitator": _X402.facilitator_url,
+            "configured": _X402.configured,
+        },
+        "endpoints": [
+            "/chat",
+            "/proactive",
+            "/coach/premium",
+            "/healthz",
+            "/docs",
+        ],
         "docs": "/docs",
     }
 
@@ -222,6 +311,93 @@ async def proactive(req: ProactiveRequest) -> ChatResponse:
         user_id=req.userId,
         session_id=req.sessionId,
         message=_PROACTIVE_PROMPT,
+    )
+
+
+@app.get("/coach/premium")
+async def coach_premium_info(request: Request) -> JSONResponse:
+    """Human/agent-friendly discovery for the paywalled endpoint.
+
+    A GET here is what happens when someone *clicks the link* (a browser, a
+    judge opening the submission's "Live API" URL). Rather than a bare
+    ``405 Method Not Allowed`` — which reads as "broken" — we answer with the
+    real x402 ``402`` challenge plus a plain-English "how to pay" note, so the
+    endpoint is self-documenting and visibly live: the price tag, asset, and
+    network are right there, exactly what a paying agent would receive.
+    """
+    resource = str(request.url).split("?", 1)[0]
+    requirements = build_payment_requirements(_X402, resource)
+    body = {
+        "x402Version": 2,
+        "accepts": [requirements],
+        "message": (
+            "This is an x402-paywalled endpoint. It settles a CEP-18 "
+            "micropayment on Casper. Send a POST with a JSON body and an "
+            "`X-PAYMENT` header carrying a signed `transfer_with_authorization`; "
+            "the CSPR.cloud facilitator settles it on-chain and the response "
+            "returns the premium insight plus the settlement receipt."
+        ),
+        "howToPay": {
+            "method": "POST",
+            "resource": resource,
+            "priceAtomic": _X402.max_amount_required,
+            "asset": _X402.asset,
+            "network": _X402.network,
+            "facilitator": _X402.facilitator_url,
+            "configured": _X402.configured,
+        },
+        "docs": "/docs",
+    }
+    header_blob = base64.b64encode(json.dumps(requirements).encode()).decode()
+    return JSONResponse(
+        status_code=402,
+        content=body,
+        headers={
+            "PAYMENT-REQUIRED": header_blob,
+            "Access-Control-Expose-Headers": "PAYMENT-REQUIRED",
+        },
+    )
+
+
+@app.post("/coach/premium", response_model=PremiumResponse)
+async def coach_premium(req: PremiumRequest, request: Request) -> JSONResponse:
+    """Pay-per-call premium insight, settled on Casper via x402.
+
+    The agentic-payments showcase: an agent that wants this richer analysis
+    pays for it with a CEP-18 micropayment over HTTP — no account, no API
+    key, just a signed authorisation the Casper facilitator settles on-chain.
+
+    Flow: ``require_payment`` raises ``PaymentRequiredError`` (→ 402 with the
+    price tag) until the caller retries with a valid ``X-PAYMENT`` header;
+    once the facilitator settles, we run the deep-dive agent turn and return
+    it with the on-chain deploy hash attached.
+    """
+    settlement = await require_payment(request, _X402)
+
+    turn = await _run_agent_turn(
+        user_id=req.userId,
+        session_id=req.sessionId,
+        message=req.message or _PREMIUM_PROMPT,
+    )
+
+    body = PremiumResponse(
+        sessionId=turn.sessionId,
+        response=turn.response,
+        events=turn.events,
+        settlement={
+            "network": settlement.network,
+            "transaction": settlement.transaction,
+            "payer": settlement.payer,
+            "settled": settlement.success,
+        },
+    )
+    # Echo the settlement receipt in the standard x402 response header too.
+    return JSONResponse(
+        content=body.model_dump(),
+        headers={
+            "X-PAYMENT-RESPONSE": settlement.response_header(),
+            "Access-Control-Expose-Headers": "X-PAYMENT-RESPONSE",
+        },
     )
 
 

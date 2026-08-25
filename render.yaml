@@ -17,7 +17,7 @@ services:
     runtime: docker
     rootDir: agent
     plan: free
-    branch: hackathon/rapid-agent
+    branch: hackathon/casper
     region: oregon
 
     dockerfilePath: agent/Dockerfile
@@ -62,6 +62,37 @@ services:
         value: mongodb
       - key: MONGODB_URI
         sync: false   # Render dashboard input (MongoDB Atlas SRV URI)
+
+      # ---- Casper x402 paywall (POST /coach/premium) --------------
+      # Premium agent turns settle a CEP-18 micropayment on Casper via
+      # the CSPR.cloud x402 Facilitator. Public values are baked in below
+      # (our deployed KaJota USD token + merchant account + testnet feePayer);
+      # only X402_FACILITATOR_API_KEY is a secret set in the dashboard. Until
+      # it's set, /coach/premium returns 402 and explains it's unconfigured —
+      # the service still boots fine.
+      - key: X402_FACILITATOR_URL
+        value: https://x402-facilitator.cspr.cloud
+      - key: X402_NETWORK
+        value: casper:casper-test
+      - key: X402_MAX_AMOUNT
+        value: "1000000"        # atomic units; KaJota USD 9-dec → 0.001
+      - key: X402_PAY_TO
+        value: "000de60d3acb6caba35e66e90a62ebf2707a0e04286de203fb316179c1f2c9ed84"
+      - key: X402_ASSET
+        value: "354ca0ad7ef8c97a02b195a1f39e96908fd3bf20d6ec4255850d05f1784fb404"
+      - key: X402_ASSET_NAME
+        value: KaJota USD
+      - key: X402_ASSET_DECIMALS
+        value: "9"
+      - key: X402_FEE_PAYER
+        value: "81d557c9dcaadea97c34d79bf7b6af07aa9d760e5dd1aabf78a45fb39e072c3a"
+      - key: X402_FACILITATOR_API_KEY
+        sync: false             # SECRET — rotated CSPR.cloud key (dashboard)
+      # Casper MCP toolset stays OFF on Render (needs Docker, which the
+      # Python image doesn't have). Enable it locally for the demo. The
+      # x402 paywall above is the deployed on-chain surface.
+      - key: CASPER_MCP_ENABLED
+        value: "0"
 
       # ---- Optional ----------------------------------------------
       - key: COACH_BACKEND_URL
