@@ -85,7 +85,7 @@ export default function App() {
   const navStack = (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={user ? 'Home' : 'SignIn'}
+        initialRouteName="Home"
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.pageBackground } }}
       >
         <Stack.Screen name="SignIn">

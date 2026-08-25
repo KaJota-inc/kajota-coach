@@ -8,12 +8,16 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+
+const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+const PRIVACY_URL = 'https://kajota.io/privacy';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Purchases, { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
@@ -160,10 +164,30 @@ export default function CoachPremiumPaywall({ navigation }: Props) {
         <Text style={styles.restoreText}>Restore purchases</Text>
       </TouchableOpacity>
 
-      <Text style={styles.legal}>
-        Subscription auto-renews until cancelled from the App Store / Play Store subscription
-        management screen. See Terms & Privacy Policy.
-      </Text>
+      <View style={styles.terms}>
+        <Text style={styles.termsHeading}>Subscription terms</Text>
+        <Text style={styles.termsBody}>
+          <Text style={styles.termsBold}>Coach Premium Monthly</Text> — 1 month auto-renewing
+          subscription, $9.99 per month ($9.99/month unit price).{'\n'}
+          <Text style={styles.termsBold}>Coach Premium Annual</Text> — 1 year auto-renewing
+          subscription, $99.99 per year (~$8.33/month unit price).
+        </Text>
+        <Text style={styles.termsBody}>
+          Payment is charged to your Apple ID account at confirmation of purchase. The subscription
+          automatically renews at the same price and duration unless auto-renew is turned off at
+          least 24 hours before the end of the current period. Manage or cancel your subscription
+          from your Apple ID Account Settings after purchase.
+        </Text>
+        <View style={styles.termsLinks}>
+          <TouchableOpacity accessibilityRole="link" onPress={() => Linking.openURL(TERMS_URL)}>
+            <Text style={styles.termsLink}>Terms of Use (EULA)</Text>
+          </TouchableOpacity>
+          <Text style={styles.termsSep}>·</Text>
+          <TouchableOpacity accessibilityRole="link" onPress={() => Linking.openURL(PRIVACY_URL)}>
+            <Text style={styles.termsLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -224,5 +248,24 @@ const styles = StyleSheet.create({
   error: { color: colors.warning, marginTop: 16, textAlign: 'center' },
   restore: { alignItems: 'center', marginTop: 24 },
   restoreText: { color: colors.brand, fontWeight: '700' },
-  legal: { color: colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 20, lineHeight: 16 },
+  terms: {
+    marginTop: 24,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 10,
+  },
+  termsHeading: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  termsBody: { color: colors.textGray, fontSize: 12, lineHeight: 17 },
+  termsBold: { color: colors.text, fontWeight: '700' },
+  termsLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  termsLink: { color: colors.brand, fontSize: 12, fontWeight: '700', textDecorationLine: 'underline' },
+  termsSep: { color: colors.textMuted, fontSize: 12 },
 });
