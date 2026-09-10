@@ -55,15 +55,28 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const stored = await loadStoredAuth();
-      if (stored) {
-        setAuthToken(stored.token);
-        setUser(stored);
+      try {
+        const stored = await loadStoredAuth();
+        if (stored) {
+          setAuthToken(stored.token);
+          setUser(stored);
+        }
+        // RC identifies purchases by app-user-id, so log in RC after auth
+        // resolves. Anonymous users still get a stable RC-generated id.
+        // Any failure here (missing native module in dev, sim quirks,
+        // network hiccup) must NOT block the app from booting — the
+        // paywall handles a missing offering gracefully at render time.
+        try {
+          await initializeRevenueCat(stored?.id);
+        } catch (rcErr) {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.warn('[bootstrap] initializeRevenueCat failed, continuing:', rcErr);
+          }
+        }
+      } finally {
+        setBootstrapping(false);
       }
-      // RC identifies purchases by app-user-id, so log in RC after auth
-      // resolves. Anonymous users still get a stable RC-generated id.
-      await initializeRevenueCat(stored?.id);
-      setBootstrapping(false);
     })();
   }, []);
 
@@ -85,7 +98,7 @@ export default function App() {
   const navStack = (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName={user ? 'Home' : 'SignIn'}
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.pageBackground } }}
       >
         <Stack.Screen name="SignIn">

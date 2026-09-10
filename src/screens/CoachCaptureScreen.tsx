@@ -12,6 +12,7 @@ import {
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -44,7 +45,7 @@ export default function CoachCaptureScreen({ navigation }: Props) {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
+      quality: 0.5,
     });
     if (!result.canceled && result.assets?.[0]?.uri) {
       setPickedUri(result.assets[0].uri);
@@ -60,7 +61,7 @@ export default function CoachCaptureScreen({ navigation }: Props) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
+      quality: 0.5,
     });
     if (!result.canceled && result.assets?.[0]?.uri) {
       setPickedUri(result.assets[0].uri);
@@ -87,7 +88,17 @@ export default function CoachCaptureScreen({ navigation }: Props) {
     setError(null);
     const interval = tickStages();
     try {
-      const base64 = await FileSystem.readAsStringAsync(pickedUri, {
+      // Bound the upload payload: modern iPhone/iPad photos are 3-8 MB and
+      // become 4-11 MB after base64 encoding, which the Coach backend rejects
+      // above ~1-2 MB. Resize to max 1024px on the long edge and re-encode
+      // at 60% JPEG quality — Vision + Gemini still get plenty of signal
+      // and the JSON body stays under ~150-300 KB.
+      const resized = await ImageManipulator.manipulateAsync(
+        pickedUri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      const base64 = await FileSystem.readAsStringAsync(resized.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
       const payload = await draftListing({
@@ -106,7 +117,19 @@ export default function CoachCaptureScreen({ navigation }: Props) {
       });
     } catch (e: any) {
       clearInterval(interval);
-      setError(e?.response?.data?.message ?? e?.message ?? 'Something went wrong. Try again.');
+      const status = e?.response?.status;
+      const serverMsg = e?.response?.data?.message;
+      let msg: string;
+      if (status === 401) {
+        msg = 'Session expired. Sign out and back in, then try again.';
+      } else if (e?.code === 'ECONNABORTED' || /timeout/i.test(e?.message ?? '')) {
+        msg = 'The AI is taking longer than usual. Check your connection and tap Draft again.';
+      } else if (!e?.response) {
+        msg = 'Network unreachable. Check your connection and tap Draft again.';
+      } else {
+        msg = serverMsg ?? e?.message ?? 'Something went wrong. Try again.';
+      }
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

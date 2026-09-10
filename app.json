@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "io.kajota.coach",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "deploymentTarget": "15.1",
       "infoPlist": {
         "NSCameraUsageDescription": "Kajota Coach needs the camera to capture product photos that the AI will turn into a listing draft.",

@@ -106,7 +106,7 @@ export default function HomeScreen({ navigation, user, onSignOut }: Props) {
           >
             <Feather color={colors.brand} name="message-square" size={16} />
             <Text style={styles.ctaSecondaryText}>
-              Chat with Coach Agent (v2 · beta){isPremium ? '' : ' · Premium'}
+              Chat with Coach Agent{isPremium ? '' : ' · Premium'}
             </Text>
           </TouchableOpacity>
 

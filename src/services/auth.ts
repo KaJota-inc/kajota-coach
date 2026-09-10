@@ -41,8 +41,18 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
     token: data.payload.token,
     refreshToken: data.payload.refreshToken,
   };
-  await SecureStore.setItemAsync(TOKEN_KEY, user.token);
-  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+  // SecureStore can fail on sim builds without the keychain entitlement
+  // ("A required entitlement isn't present.") or on very unusual device
+  // states (storage full, corrupted keychain). None of those should block
+  // the in-memory session for the current app run — the token is already
+  // set on the api client via setAuthToken() by the caller.
+  try {
+    await SecureStore.setItemAsync(TOKEN_KEY, user.token);
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+  } catch {
+    // Persist failed — user will need to sign in again next launch but
+    // the current session is fully usable.
+  }
   return user;
 }
 

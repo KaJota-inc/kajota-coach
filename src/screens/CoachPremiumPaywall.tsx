@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 
 const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
-const PRIVACY_URL = 'https://kajota.io/privacy';
+const PRIVACY_URL = 'https://kajota.io/privacy-policy';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Purchases, { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
