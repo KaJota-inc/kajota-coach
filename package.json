@@ -41,7 +41,7 @@
     "expo-clipboard": "~6.0.3",
     "expo-crypto": "~13.0.2",
     "expo-dev-client": "~4.0.29",
-    "expo-file-system": "~17.0.1",
+    "expo-file-system": "~57.0.0",
     "expo-image-picker": "~15.0.7",
     "expo-linear-gradient": "~13.0.2",
     "expo-linking": "~6.3.1",
