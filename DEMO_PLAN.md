@@ -15,15 +15,19 @@ That risk is small (Promising Products is a sweep over the field, not a per-proj
 
 ## Plan
 
-### Phase 1 — Hold until 2026-11-09 at the latest (fallback: start earlier if Promising Products announces first)
+### Phase 1 — Start now (user call, 2026-11-02): the hold was not worth the timeline risk
 
-Reason: Promising Products announcement is "mid-November" per the memory flag. Mid-November is probabilistically Nov 10–15. The NEAR submission deadline is Nov 14 23:59 UTC. We want to **publish the NEAR demo after any Promising Products result lands**, so the two are chronologically separate on the project's public timeline (an audience reading the X thread sees the Mesh Singapore story close before NEAR opens).
+Original plan held the re-cut until Nov 9 to let Promising Products announce first. User reversed that today — start the re-cut immediately. Reasoning:
 
-Decision tree:
-- **If Promising Products announces by 2026-11-09:** start the NEAR re-cut on Nov 10, publish Nov 11-12. Buys a 2-3 day buffer before submission deadline.
-- **If Promising Products has not announced by 2026-11-09:** the memory flag was optimistic. Proceed with the re-cut on Nov 10 regardless — Promising Products review is evidence-based (`demo/dryrun-ui.sh` output, `kajota-mesh.vercel.app` state, GitHub commits), not video-timeline-based. A fresh video on a fresh URL will not confuse a judge looking at HackQuest.
-- **If Promising Products announces and Mesh wins:** the NEAR re-cut becomes an asset, not a risk. Re-use the "we just placed on Arbitrum" framing in the NEAR X post's opening line as evidence of substrate credibility.
-- **If Promising Products announces and Mesh does not place:** re-cut as planned, no change.
+- The Promising Products review is **evidence-based** (`demo/dryrun-ui.sh` output, `kajota-mesh.vercel.app` state, GitHub commits), not video-timeline-based. A fresh video on a fresh X URL will not reach a Promising Products judge who is reviewing against HackQuest's own asset.
+- The HackQuest-hosted Mesh Singapore video asset at `assets.hackquest.io/.../demoVideo/aIJPgph8_JPWSDZTihp3T.mp4` is **not touched** by any re-cut here — the NEAR version lives at a new X-hosted URL, so the two tracks are visually and chronologically separable.
+- Delaying by a week with three live fires (PayPal, Dubai, hub) is more expensive than the Promising-Products-perception risk it hedges against.
+
+Decision tree collapsed to one branch: **re-cut starts 2026-11-02, user records VO 11-03/11-04, published to X by 11-05.** Everything after is contingency.
+
+- **If Promising Products announces and Mesh wins** before Nov 14: the already-published NEAR re-cut becomes an asset, not a risk. Add a reply tweet to the NEAR X post citing the Arbitrum result as substrate credibility.
+- **If Promising Products announces and Mesh does not place** before Nov 14: no change to the NEAR submission.
+- **If Promising Products has not announced by 2026-11-14** (NEAR deadline): the NEAR submission is already in — zero coupling to Mesh Singapore's unresolved tracks.
 
 ### Phase 2 — The re-cut itself (target: 2 build hours, user records VO)
 
@@ -86,25 +90,25 @@ Each screenshot captioned in the X thread with 1-2 sentences. Drop in quality (v
 
 | Date (UTC) | Action | Driver |
 |---|---|---|
-| 2026-11-02 | This plan written | Claude (this session) |
-| 2026-11-03 to 11-08 | HOLD on re-cut | — |
-| 2026-11-09 | Check Promising Products status; decide re-cut start | User + Claude |
-| 2026-11-10 | Start re-cut (title card, mid-video insert, closing frame edits) | Claude |
-| 2026-11-10 to 11-11 | User records fresh VO per `demo/RECORDING.md` pipeline | User |
-| 2026-11-12 | Finish cut, mux, caption | Claude |
-| 2026-11-13 | User publishes X post, user records `demoUrl` | User |
+| 2026-11-02 | This plan written + MESH_RECUT_RECORDING.md VO beats drafted + MESH_RECUT_X_POST.md variants drafted | Claude (this session) |
+| 2026-11-03 | User reads VO script, records fresh VO (6 beats) per MESH_RECUT_RECORDING.md | User |
+| 2026-11-04 | User delivers VO + Shield verifier terminal recording of the two #384 tx hashes to the worktree | User |
+| 2026-11-04 to 11-05 | Scene 0 title card, mid-video Shield insert, closing frame; mux + caption | Claude (next session) |
+| 2026-11-05 | User reviews final cut, publishes X post from MESH_RECUT_X_POST.md | User |
+| 2026-11-06 to 11-13 | Buffer. Submission build + upstream PR work continues in parallel | — |
 | 2026-11-14 | Submission form filled; `demoUrl` + `projectUrl` sent to `POST /api/applications` | User |
 
-Hard cut-off: 2026-11-14 23:59 UTC. Any slip after that is a disqualification.
+Hard cut-off: 2026-11-14 23:59 UTC. Any slip after that is a disqualification. The 8-day buffer from Nov 6 → Nov 14 absorbs any Mesh re-cut iteration without touching submission week.
 
 ## TODO this session
 
-- [ ] User reads this plan.
-- [ ] User signals OK to the hold-until-Nov-9 approach.
-- [ ] User notes any Promising Products insider knowledge (e.g. a specific announcement date Arbitrum confirmed privately) that would shift the hold date.
+- [x] User reads this plan.
+- [x] User signals go/no-go on hold vs start-now. **Chose start-now 2026-11-02.**
+- [x] Draft `MESH_RECUT_RECORDING.md` VO beats
+- [x] Draft `MESH_RECUT_X_POST.md` variants
 
 ## Follow-ups for the next session
 
-- Draft `demo/RECORDING.md` for the fresh VO beats (1-page script, timed to each scene).
-- Draft the X post variants (short / threaded) once the submission framing is final.
-- Confirm the HackQuest asset at `assets.hackquest.io/.../demoVideo/aIJPgph8_JPWSDZTihp3T.mp4` is **not** touched.
+- User records VO per MESH_RECUT_RECORDING.md (6 beats, 1.0× speed only).
+- Confirm the HackQuest asset at `assets.hackquest.io/.../demoVideo/aIJPgph8_JPWSDZTihp3T.mp4` is **not** touched — the NEAR re-cut lives on a fresh X-hosted URL only.
+- Cut Scene 0 title card + mid-video Shield insert at ~30s + new closing frame. Keep middle 25-50s unchanged from the Mesh Singapore demo.

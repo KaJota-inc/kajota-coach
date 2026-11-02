@@ -15,9 +15,11 @@ So "a docs PR" has no public target. The upstream contribution has to land somew
 
 ## Chosen scope
 
+User chose **stretch** on 2026-11-02 — ship both.
+
 **Primary — ship by 2026-11-04 (3 days):** post a correction comment on `near/intents#385` with the exact replacement block for the BTC-deposit-refund docs. Not a PR, but an upstream contribution that is public, verifiable, and reads as "we read the chain, we read the docs, we filed the delta." If a maintainer later asks for a PR, we have the diff ready.
 
-**Stretch — ship by 2026-11-07 (5 days):** a surgical PR on `defuse-protocol/one-click-sdk-typescript` adding a `verifyIntentDestination(statusResponse, expectedRecipient)` helper that reads the on-chain `receiver_id` from the returned tx hash and raises if it differs from the quote's `recipient`. This maps directly to `near/intents#384` and is capability-add, not correctness-fix (playbook gate #4). The repo was last merged on `2026-09-22` by `emochka2007`; it is active enough to review a tight PR.
+**Stretch — ship by 2026-11-07 (5 days):** a surgical PR on `defuse-protocol/one-click-sdk-typescript` adding a `verifyIntentDestination(status, expectedRecipient, nearRpcUrl)` helper that reads the on-chain `receiver_id` from each entry in `status.swapDetails.nearTxHashes` and raises if any diverges from `status.quoteResponse.quoteRequest.recipient`. Maps directly to `near/intents#384` and is capability-add, not correctness-fix (playbook gate #4). The repo was last merged `2026-09-22` by `emochka2007`; it is active enough to review a tight PR.
 
 Both land before the halfway mark. If the primary comment prompts a maintainer to invite a doc PR, we file it then — but we do not wait for that invitation.
 
@@ -85,14 +87,22 @@ Length: 229 words of body + the table. Reads like help, not promotion. The last 
 
 [github.com/defuse-protocol/one-click-sdk-typescript](https://github.com/defuse-protocol/one-click-sdk-typescript) — the TypeScript SDK for the 1Click API that `near/intents#384` is about. ISC licensed, has 5 open issues and 3 open PRs, last merge 2026-09-22.
 
-### Scope
+### Scope (confirmed against SDK source 2026-11-02)
 
-Add a single helper `verifyIntentDestination(status, expectedRecipient)` that:
+Real types in `src/models/`:
 
-1. Takes a parsed `/v0/status` response and the `recipient` from the original quote.
-2. For each tx hash in the status response's `txs` array (or whatever the field is named — needs verification against the current SDK), fetches the NEAR tx via the SDK's existing RPC helper.
-3. Walks the actions, finds the signed-transfer intent, extracts `receiver_id`.
-4. Returns `{ok: true}` if `receiver_id === expectedRecipient`, else `{ok: false, quoted: expectedRecipient, actual: receiver_id, reason: "DESTINATION_MISMATCH"}`.
+- `GetExecutionStatusResponse` carries `status: enum { SUCCESS | REFUNDED | ... }`, `quoteResponse: QuoteResponse` (which echoes the original `QuoteRequest.recipient`), and `swapDetails: SwapDetails`.
+- `SwapDetails` carries `nearTxHashes: Array<string>`, `intentHashes: Array<string>`, `originChainTxHashes` and `destinationChainTxHashes` as `Array<TransactionDetails>`, and the `refundedAmount` / `refundReason` fields (both empty when `status === SUCCESS`).
+- `QuoteRequest` carries `recipient: string` + `recipientType: enum { DESTINATION_CHAIN | CONFIDENTIAL_INTENTS | INTENTS }` + optional `virtualChainRecipient` and `customRecipientMsg`. In the #384 case, `recipient` is the account `b45e...605c6` and `recipientType` is `CONFIDENTIAL_INTENTS`.
+
+Add a single helper `verifyIntentDestination(status, nearRpcUrl)`:
+
+1. Takes a `GetExecutionStatusResponse` (so the quoted recipient is already attached via `status.quoteResponse.quoteRequest.recipient`) and a NEAR RPC URL.
+2. For each hash in `status.swapDetails.nearTxHashes`, calls `tx` or `EXPERIMENTAL_tx_status` on the RPC, walks the `receipts_outcome` → finds the `FunctionCall` on `intents.near` → parses the args to extract the signed-transfer intent's `receiver_id`.
+3. Compares each extracted `receiver_id` to `status.quoteResponse.quoteRequest.recipient` (or `virtualChainRecipient` when `recipientType === VIRTUAL_CHAIN`).
+4. Returns `{ok: true, verified: number}` if every hash's `receiver_id` matched, else `{ok: false, quoted: string, mismatched: Array<{txHash, actual}>, reason: 'DESTINATION_MISMATCH'}`.
+
+The signature `verifyIntentDestination(status, nearRpcUrl)` is tighter than the memo's earlier `(status, expectedRecipient)` — the status response already carries the quoted recipient, so a caller cannot accidentally pass a mismatched expected.
 
 Capability-add per playbook gate #4: *"X could not do Y at all; now it can."* X = the one-click SDK, Y = catch `#384`-style post-sign destination mismatch.
 
@@ -116,17 +126,26 @@ The only check possible is **post-sign, on-chain** against the quoted recipient.
 
 ## What this adds
 
-A single helper that reads the on-chain `receiver_id` back from the tx
-hashes `/v0/status` returned, and compares it against the quote's `recipient`:
+A single helper that reads the on-chain `receiver_id` back from
+`status.swapDetails.nearTxHashes` and compares it against
+`status.quoteResponse.quoteRequest.recipient`:
 
 ```ts
+import { GetExecutionStatusResponse } from '../models/GetExecutionStatusResponse';
+
+export type VerifyDestinationResult =
+  | { ok: true; verified: number }
+  | {
+      ok: false;
+      quoted: string;
+      mismatched: Array<{ txHash: string; actual: string }>;
+      reason: 'DESTINATION_MISMATCH';
+    };
+
 export async function verifyIntentDestination(
-  status: StatusResponse,
-  expectedRecipient: string,
-): Promise<
-  | { ok: true }
-  | { ok: false; quoted: string; actual: string; reason: 'DESTINATION_MISMATCH' }
-> { /* ... */ }
+  status: GetExecutionStatusResponse,
+  nearRpcUrl: string,
+): Promise<VerifyDestinationResult> { /* ... */ }
 ```
 
 Zero behavior change to existing code paths — purely additive. Opt-in: callers choose when to run it (after `getStatus`, before enqueueing the next swap, before trusting a `SUCCESS` for accounting).
@@ -145,16 +164,12 @@ Fixes #384 (at the SDK consumer layer only).
 
 ### Risk
 
-- The SDK may already structure the status response differently than I'm assuming. The PR body needs tightening after a 1-hour read of the SDK source. Open question for the user: is this worth the ~3-day commitment, or do we stop at the comment?
-- A PR filed by an unknown author gets reviewed by whoever is on-call for the SDK that week. Merge pace on this repo is good for small fixes but PRs have sat for a year (`#4` TEE-based PDS validation from 2025-12). Risk of not merging by day 7 is real.
+- A PR filed by an unknown author gets reviewed by whoever is on-call for the SDK that week. Merge pace is good for small fixes (#21 merged same-day on 2026-09-22) but one PR has sat for a year (#4 TEE-based PDS validation from 2025-12). Risk of not merging by Nov 7 is real.
+- The `nep141:hood.omft.near` signed-transfer intent format is specific to confidential swaps on the NEAR Intents verifier. The helper must handle at least the public (`DESTINATION_CHAIN`) and confidential (`CONFIDENTIAL_INTENTS`) recipient types; parsing the `FunctionCall` args for each is slightly different.
 
-### Decision point for user
+### Fallback if the PR stalls
 
-- **Default (safe):** ship the primary comment on #385 only. Satisfies gate #3's spirit if a maintainer acknowledges it, but is not a merged PR.
-- **Stretch (ambitious):** ship the primary comment AND the SDK PR. Costs ~3 days of focus. Pays off only if the PR merges by Nov 7.
-- **Fallback (if SDK PR stalls):** publish the helper as a standalone npm package (`@kajota/near-intents-destination-check`) and reference it in the submission. Not a merged upstream PR, but it is a shippable artifact that reads as "we fixed it anyway." Downgrade from gate #3 ✓ to gate #3 ~, same as the KeeperHub entry's loss.
-
-**Recommendation:** default to the comment this week. Open the SDK PR only if (a) PayPal AI's Nov 12 ship is on track and (b) Dubai Phase 0 verify is green on Nov 3. If either is red, drop the SDK PR scope and ship the comment only.
+Publish the helper as a standalone npm package (`@kajota/near-intents-destination-check`) and reference it in the submission. Not a merged upstream PR, but a shippable artifact that reads as *"we fixed it anyway."* Downgrade from gate #3 ✓ to gate #3 ~ — same shape as the KeeperHub entry's loss, so this is a known-bad fallback, acceptable only if the PR explicitly 403s or is explicitly refused by a maintainer. Not acceptable as a "we gave up" fallback.
 
 **Nigeria eligibility — accepted risk, not a gate.** Per user call (2026-11-02), we are not asking NEAR Discord about Nigerian payout eligibility. The HACKATHON.md is silent on geography; the common hackathon OFAC-exclusion list (Iran / Syria / N.Korea / Russia / Crimea / Belarus / Quebec / Italy / Brazil, per `[[hackathon-winning-playbook]]` red-flag #7) does not include Nigeria. The residual risk is post-win: if Mesh places and NEAR Foundation declines payout citing an off-page sanctions rule, that is a resolution-via-DM path with Illia, not a submission blocker. No build hours are gated on this.
 
@@ -168,12 +183,14 @@ Fixes #384 (at the SDK consumer layer only).
 
 ## TODO this session
 
-- [ ] User reviews this scope and picks default vs stretch.
-- [ ] If default: user posts the #385 comment from their GitHub account. Record URL here.
-- [ ] If stretch: open PR scope expands to include SDK PR; add timeline to this file.
+- [x] User reviews this scope and picks default vs stretch. **Picked stretch 2026-11-02.**
+- [x] Read `one-click-sdk-typescript` source for real field names. **Done 2026-11-02, see "Scope (confirmed against SDK source 2026-11-02)" above.**
+- [ ] User posts the #385 comment from their GitHub account. Record URL here: `_____`
+- [ ] User (or next session) forks `defuse-protocol/one-click-sdk-typescript`, drops in `src/verify-destination.ts` + `src/__tests__/verify-destination.test.ts` + `examples/verify-destination.ts`, runs the two #384 tx hashes through it as the real-world integration test, opens the PR.
+- [ ] Record SDK PR URL here: `_____`
 
 ## TODO next session
 
-- [ ] Watch the comment thread for 48h.
-- [ ] If maintainer invites a docs PR, draft it against whichever repo they name.
-- [ ] If going stretch, read `one-click-sdk-typescript` source for 1h and tighten the PR body.
+- [ ] Watch the #385 comment thread for 48h; if a maintainer invites a docs PR, draft it against whichever repo they name.
+- [ ] Watch the SDK PR for 48h; if the on-call reviewer asks for scope changes, tighten and re-push same-day.
+- [ ] If Nov 7 arrives and the SDK PR is unmerged but reviewed, record what the reviewer asked for — the submission's "What we got wrong first" section (gate #7) wants a real post-mortem on the first PR shape.
