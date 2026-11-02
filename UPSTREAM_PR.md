@@ -154,7 +154,9 @@ Fixes #384 (at the SDK consumer layer only).
 - **Stretch (ambitious):** ship the primary comment AND the SDK PR. Costs ~3 days of focus. Pays off only if the PR merges by Nov 7.
 - **Fallback (if SDK PR stalls):** publish the helper as a standalone npm package (`@kajota/near-intents-destination-check`) and reference it in the submission. Not a merged upstream PR, but it is a shippable artifact that reads as "we fixed it anyway." Downgrade from gate #3 ✓ to gate #3 ~, same as the KeeperHub entry's loss.
 
-**Recommendation:** default to the comment this week. Open the SDK PR only if (a) Nigeria eligibility is confirmed by Nov 3, (b) PayPal AI's Nov 12 ship is on track, (c) Dubai Phase 0 verify is green on Nov 3 as well. If any of those three are red, drop the SDK PR scope and ship the comment only.
+**Recommendation:** default to the comment this week. Open the SDK PR only if (a) PayPal AI's Nov 12 ship is on track and (b) Dubai Phase 0 verify is green on Nov 3. If either is red, drop the SDK PR scope and ship the comment only.
+
+**Nigeria eligibility — accepted risk, not a gate.** Per user call (2026-11-02), we are not asking NEAR Discord about Nigerian payout eligibility. The HACKATHON.md is silent on geography; the common hackathon OFAC-exclusion list (Iran / Syria / N.Korea / Russia / Crimea / Belarus / Quebec / Italy / Brazil, per `[[hackathon-winning-playbook]]` red-flag #7) does not include Nigeria. The residual risk is post-win: if Mesh places and NEAR Foundation declines payout citing an off-page sanctions rule, that is a resolution-via-DM path with Illia, not a submission blocker. No build hours are gated on this.
 
 ---
 
