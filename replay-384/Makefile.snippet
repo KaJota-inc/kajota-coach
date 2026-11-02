@@ -1,0 +1,23 @@
+# Appended to the submission repo's existing Makefile.
+# This is the one runnable claim the SUBMISSION_IDEA_FIELD.md extract names.
+
+# Reads NEAR mainnet state for the two tx hashes in near/intents#384 and
+# runs them through Shield's post-signature destination verifier. Expected:
+# MISMATCH detected, agent halted before the second deposit, exit 0.
+# No private keys, no on-chain writes.
+#
+# Set REPLAY_USE_FIXTURE=1 to run with a baked-in fixture of the #384 state
+# instead of a live RPC call — use this in CI, in an air-gapped judge
+# environment, or when debugging the harness itself.
+#
+# Set NEAR_RPC_URL to override the default mainnet RPC endpoint.
+
+.PHONY: replay-384
+replay-384:
+	@command -v npx >/dev/null 2>&1 || { echo "npx not found; install Node.js >= 18"; exit 1; }
+	@test -f scripts/replay-384.ts || { echo "scripts/replay-384.ts missing; see sdk-pr-files/README.md for drop-in"; exit 1; }
+	@npx --yes tsx scripts/replay-384.ts
+
+.PHONY: replay-384-fixture
+replay-384-fixture:
+	@REPLAY_USE_FIXTURE=1 $(MAKE) replay-384
