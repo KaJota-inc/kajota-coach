@@ -2,32 +2,31 @@
 
 ## Where Mesh Singapore stands as of today (2026-11-02)
 
-Per `[[hackathon-arbitrum-singapore-result]]` memory, read at session start:
+**Status check re-run against blog.arbitrum.foundation 2026-11-02** (verified against the latest post, *"From Founder House Singapore to Market: $300K for 9 Standout Teams"*, Nov 2):
 
-- **Overall Prize ($70K) was announced on 2026-10-16.** Mesh did not podium. Winners: Zona ($40K, tokenized stock lending on Robinhood Chain), Peridot ($20K, cross-chain stock-token lending), AquaZero ($10K, stablecoin liquidity).
-- **Promising Products ($15K)** track: not reported in Oct 16 announcement. May still be in review. Memory flag: *"check again mid-November"* — so there is a chance of a Promising Products reveal falling inside the NEAR submission window.
-- **Grants ($30K, milestone-tied)**: also pending; evidence-and-milestone based, not video based. No video-reuse conflict.
-- Mesh is not invited to Phase 2 Founder House (Oct 23–25 Singapore in-person).
+- **Overall Prize ($70K)** — announced 2026-10-16. Mesh did not podium. Winners: Zona ($40K), Peridot ($20K), AquaZero ($10K). Confirmed in `[[hackathon-arbitrum-singapore-result]]`.
+- **Promising Products ($20K, not $15K as earlier memory said)** — announced 2026-11-02 at Founder House Day 3. Winners: **StockRip** ($10K), **Vexi** ($6K), **Tawf Finance** ($4K). Honorable mentions: Zona, Krsi, Yuzu Money, Kite App, Moneyness. **Mesh is not named** in winners or honorable mentions.
+- **General Track ($120K at Founder House)** — Atoma ($60K), Kurtosis ($40K), Chainwall + WageFlow ($20K combined). Mesh not named.
+- **Robinhood Chain Awards ($90K)** — Hyperloop Finance ($60K Founder-in-Residence), Fables ($30K Innovation). Mesh not named.
+- **Milestone-based grants ($70K pool)** — no team names published yet; granted to teams "making progress after the event." Mesh wasn't invited to Founder House, so almost certainly not in this pool either.
 
-**Conclusion for video reuse:** the headline competition is CLOSED. The only live tracks are Promising Products ($15K, likely video-visible) and Grants ($30K, not video-visible). Re-cutting the Mesh Singapore demo with a NEAR HACKATHON overlay carries one real risk: a Promising Products judge who re-opens the Mesh HackQuest page in mid-November and sees a NEAR HACKATHON overlay on the same video might read that as "project pivoted away from Arbitrum / Robinhood Chain."
+**Conclusion for video reuse:** every Mesh Singapore track that could judge our video has judged. The headline competition is CLOSED. The Promising Products track is CLOSED. Only the milestone-grant pool remains, and that pool is evidence-and-progress based (post-event product shipping), not video-review based.
 
-That risk is small (Promising Products is a sweep over the field, not a per-project re-review) but non-zero. Mitigation: upload the NEAR re-cut as a **separate URL** (fresh X post, fresh file, do not overwrite the HackQuest-hosted asset at `assets.hackquest.io/.../demoVideo/aIJPgph8_JPWSDZTihp3T.mp4`).
+**Guardrail from the brief ("do not re-cut before Mesh Singapore has judged") is satisfied in full.** Zero duplicate-submission perception risk.
+
+Mitigation preserved anyway: upload the NEAR re-cut as a **separate URL** (fresh X post, fresh file, do not overwrite the HackQuest-hosted asset at `assets.hackquest.io/.../demoVideo/aIJPgph8_JPWSDZTihp3T.mp4`). Cheap insurance.
 
 ## Plan
 
-### Phase 1 — Start now (user call, 2026-11-02): the hold was not worth the timeline risk
+### Phase 1 — Start now: locked 2026-11-02
 
-Original plan held the re-cut until Nov 9 to let Promising Products announce first. User reversed that today — start the re-cut immediately. Reasoning:
+Twin green lights by Nov 2:
+1. **User call:** "start now" — drop the Nov 9 hold.
+2. **Mesh Singapore judging closed** — Overall announced Oct 16, Promising Products + Founder House announced Nov 2. Mesh not named in any track. The brief's guardrail ("do not re-cut before Mesh Singapore has judged") is satisfied.
 
-- The Promising Products review is **evidence-based** (`demo/dryrun-ui.sh` output, `kajota-mesh.vercel.app` state, GitHub commits), not video-timeline-based. A fresh video on a fresh X URL will not reach a Promising Products judge who is reviewing against HackQuest's own asset.
-- The HackQuest-hosted Mesh Singapore video asset at `assets.hackquest.io/.../demoVideo/aIJPgph8_JPWSDZTihp3T.mp4` is **not touched** by any re-cut here — the NEAR version lives at a new X-hosted URL, so the two tracks are visually and chronologically separable.
-- Delaying by a week with three live fires (PayPal, Dubai, hub) is more expensive than the Promising-Products-perception risk it hedges against.
+Decision tree collapsed: **re-cut starts 2026-11-02, user records VO 11-03/11-04, published to X by 11-05.** No contingency branches remain — all three Mesh Singapore tracks that could have review-conflicted with a NEAR title card have reported, and Mesh is in none.
 
-Decision tree collapsed to one branch: **re-cut starts 2026-11-02, user records VO 11-03/11-04, published to X by 11-05.** Everything after is contingency.
-
-- **If Promising Products announces and Mesh wins** before Nov 14: the already-published NEAR re-cut becomes an asset, not a risk. Add a reply tweet to the NEAR X post citing the Arbitrum result as substrate credibility.
-- **If Promising Products announces and Mesh does not place** before Nov 14: no change to the NEAR submission.
-- **If Promising Products has not announced by 2026-11-14** (NEAR deadline): the NEAR submission is already in — zero coupling to Mesh Singapore's unresolved tracks.
+The only remaining Mesh Singapore artifact is the milestone-based grants pool ($70K, no team names yet). That pool evaluates on post-event shipping evidence, not on which hackathon's title card is overlaid on a video. No re-cut conflict.
 
 ### Phase 2 — The re-cut itself (target: 2 build hours, user records VO)
 
