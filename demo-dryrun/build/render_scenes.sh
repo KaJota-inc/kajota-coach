@@ -14,6 +14,11 @@ OUT_DIR="$(cd "$(dirname "$0")/.." && pwd)/scenes"
 mkdir -p "$OUT_DIR"
 
 for html in "$HTML_DIR"/scene_*.html; do
+  # Skip placeholder HTMLs — scenes 3 and 5 come from capture_mesh_live.sh, not from
+  # a static HTML. Re-renders here would clobber the live crops.
+  case "$html" in
+    *.PLACEHOLDER.html) echo "[skip] $(basename "$html") (placeholder — see capture_mesh_live.sh)"; continue ;;
+  esac
   name="$(basename "$html" .html)"
   out="$OUT_DIR/$name.png"
   echo "[render] $name"

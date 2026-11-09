@@ -21,12 +21,18 @@ Each beat maps to one of the six MESH_RECUT_RECORDING.md beats. Dry-run duration
 |---|---|---|---|---|
 | 0 | 1 | The HOST defect (near/intents#384 + two tx receipts + sink) | 11.9s | New HTML (this folder) |
 | 2 | 2 | The pitch (Shield · Mesh · Coach + the flow) | 11.9s | New HTML (this folder) |
-| 3 | 3 | Mesh N-party split | 9.9s | **Placeholder** — replace with Mesh Singapore's existing scene |
+| 3 | 3 | Mesh N-party split hero ("N parties out · atomic settlement") | 9.9s | **Live capture** of `kajota-mesh.vercel.app` hero via `capture_mesh_live.sh` |
 | 4 | 4 | Shield verifier replay against #384 (Nearblocks split + terminal) | 13.9s | New HTML (this folder) |
-| 5 | 5 | Live counter | 9.9s | **Placeholder** — replace with Mesh Singapore's existing scene |
+| 5 | 5 | Live counter ("LIVE FROM ARBITRUM SEPOLIA" + 10:57 live badge) | 9.9s | **Live capture** of `kajota-mesh.vercel.app` live-state section via `capture_mesh_live.sh` |
 | 6 | 6 | Closing (built at NEAR HACKATHON) | 8.0s | New HTML (this folder) |
 
-Total: **65.5s**. Target was 68–72s from MESH_RECUT_RECORDING.md; the dry-run is at the fast end because scenes 3 and 5 are placeholders using slightly shorter copy than the Mesh Singapore originals. When Mesh Singapore's real scenes drop in, re-measure durations against their content.
+Total: **65.5s**. Target was 68–72s from MESH_RECUT_RECORDING.md; the dry-run is at the fast end. When Mesh Singapore's real scenes drop in — they did on Nov 9 via `capture_mesh_live.sh` — re-measure durations against the VO silencedetect output after the user records.
+
+### About the live captures (Nov 9 pivot)
+
+The original plan was to copy Mesh Singapore's own PNG captures from `kajota-mesh/demo/output/` into this folder. On Nov 9 we found those captures weren't committed to the kajota-mesh repo — they were ephemeral assets for the Oct 4 submission. Pivoted to re-capture from the live `kajota-mesh.vercel.app` site via a fresh headless Chrome script (`build/capture_mesh_live.sh`): one 1920×5400 full-page render + two `magick -crop` extractions.
+
+The captures carry a **live timestamp** in the "live · 2 chains · HH:MM:SS" badge, so each new run of `capture_mesh_live.sh` produces visually similar but byte-different PNGs. For the final video cut: run `capture_mesh_live.sh` once a few minutes before the final `stitch_video.sh` so the timestamp in the badge is close to publish time — makes the "live" claim less staged.
 
 ## How to iterate on a scene
 
@@ -49,22 +55,19 @@ magick montage scenes/scene_*.png -geometry 640x360+8+8 \
   -background '#0a0f1e' -tile 3x2 build/contact_sheet.png
 ```
 
-## Replacing the placeholder scenes (3 and 5)
+## Refreshing scenes 3 and 5 (live-captured)
 
-Mesh Singapore's `demo/dryrun-ui.sh` pipeline (in the `kajota-mesh` repo, not here) already produced the 6 Mesh Singapore scene PNGs for the Oct 4 submission. Two of them are directly reusable:
-
-- Mesh Singapore's **N-party-split scene** → replace `demo-dryrun/scenes/scene_3_mesh_split.png`
-- Mesh Singapore's **live-counter scene** → replace `demo-dryrun/scenes/scene_5_live_counter.png`
+Scenes 3 and 5 are captured from the live `kajota-mesh.vercel.app` site, not rendered from local HTML. The `build/capture_mesh_live.sh` script does one full-page screenshot + two crops:
 
 ```bash
-# From kajota-mesh checkout:
-cp demo/output/scene_3.png <this-worktree>/demo-dryrun/scenes/scene_3_mesh_split.png
-cp demo/output/scene_5.png <this-worktree>/demo-dryrun/scenes/scene_5_live_counter.png
-# Then re-stitch:
-cd <this-worktree>/demo-dryrun && ./build/stitch_video.sh
+cd demo-dryrun && ./build/capture_mesh_live.sh
 ```
 
-Exact filenames depend on the Mesh Singapore pipeline naming; adjust as needed. The placeholder HTMLs explicitly label themselves as placeholders in the render so a judge seeing the dry-run accidentally would not mistake them for the final.
+Writes `scenes/scene_3_mesh_split.png` and `scenes/scene_5_live_counter.png`, overwriting whatever was there. `render_scenes.sh` SKIPS the `*.PLACEHOLDER.html` files for these two scenes, so re-running it will not clobber the live captures.
+
+**Rule of thumb:** run `capture_mesh_live.sh` just before the final `stitch_video.sh` so the live timestamp badge in Scene 5 is close to publish time.
+
+**If the Mesh Singapore site is unreachable:** rename the two `.PLACEHOLDER.html` files back to `.html` and run `render_scenes.sh` — the placeholder renders explicitly label themselves so a judge seeing them cannot miss the gap.
 
 ## Adding the VO
 
