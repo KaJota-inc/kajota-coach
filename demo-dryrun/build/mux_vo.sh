@@ -23,9 +23,17 @@
 set -euo pipefail
 
 VO="${1:-}"
-if [ -z "$VO" ] || [ ! -f "$VO" ]; then
-  echo "usage: $0 <vo.wav>" >&2
+if [ -z "$VO" ]; then
+  echo "usage: $0 <vo.wav|.m4a|.aiff|.mp3>" >&2
+  echo "       (ffmpeg accepts any of those; WAV 48kHz mono is what the recording script targets)" >&2
   exit 2
+fi
+if [ ! -f "$VO" ]; then
+  echo "error: VO file not found: $VO" >&2
+  echo "       (looked relative to $(pwd))" >&2
+  echo "       drop the file at /Users/oluwaboriola/Documents/kajota-coach/.claude/worktrees/near-agents-scout-1b6982/vo_near_recut.wav" >&2
+  echo "       then re-run from the worktree root: ./demo-dryrun/build/mux_vo.sh vo_near_recut.wav" >&2
+  exit 3
 fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
