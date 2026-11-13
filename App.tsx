@@ -27,6 +27,7 @@ import CoachAgentChatScreen from '@/screens/CoachAgentChatScreen';
 import CoachCaptureScreen from '@/screens/CoachCaptureScreen';
 import CoachReviewScreen from '@/screens/CoachReviewScreen';
 import ConciergeScreen from '@/screens/ConciergeScreen';
+import CasperPremiumScreen from '@/screens/CasperPremiumScreen';
 import HomeScreen from '@/screens/HomeScreen';
 import MeshSignScreen from '@/screens/MeshSignScreen';
 import SignInScreen from '@/screens/SignInScreen';
@@ -112,6 +113,11 @@ export default function App() {
           component={MeshSignScreen}
           name="MeshSign"
           options={{ headerShown: true, title: 'Publish on Mesh', headerTintColor: colors.text }}
+        />
+        <Stack.Screen
+          component={CasperPremiumScreen}
+          name="CasperPremium"
+          options={{ headerShown: true, title: 'Premium on Casper', headerTintColor: colors.text }}
         />
       </Stack.Navigator>
     </NavigationContainer>

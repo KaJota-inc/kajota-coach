@@ -161,6 +161,81 @@ fetch_mcp = McpToolset(
     ),
 )
 
+# ---- Casper MCP toolset (on-chain awareness, gated) ---------------
+#
+# Casper's AI Toolkit ships an MCP server (msanlisavas/casper-mcp, a .NET
+# tool / Docker image) that exposes ~80 read tools over the chain — account
+# balances, deploys, contracts, CEP-18 tokens, transfers, network status —
+# all through CSPR.cloud. Bolting it onto this ADK agent as a third MCP
+# partner makes the Coach a Casper-native economic actor: it can answer
+# "what's my CSPR balance?" or "did that payment settle on-chain?" by
+# querying Casper directly, in the same MCP-as-architecture pattern as the
+# MongoDB + Fetch partners.
+#
+# It's gated for two reasons:
+#   1. The server is .NET — we run it via `docker run -i` (stdio MCP), so it
+#      needs Docker on the host. Fine locally for the demo; the Render
+#      Python image has no Docker daemon.
+#   2. It needs a CSPR.cloud API key (the buildathon issues a sponsored one).
+#
+# So unless CASPER_MCP_ENABLED is truthy AND a key is present, we skip it and
+# the agent boots with just MongoDB + Fetch — the deployed service stays up,
+# and the x402 paywall (server-side, pure Python) carries the on-chain story
+# on its own.
+_CASPER_MCP_ENABLED = os.environ.get("CASPER_MCP_ENABLED", "").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+_CSPR_CLOUD_API_KEY = os.environ.get("CSPR_CLOUD_API_KEY", "")
+_CASPER_NETWORK = os.environ.get("CASPER_MCP_NETWORK", "testnet")
+
+_tools: list[McpToolset] = [mongodb_mcp, fetch_mcp]
+_casper_instruction = ""
+
+if _CASPER_MCP_ENABLED and _CSPR_CLOUD_API_KEY:
+    casper_mcp = McpToolset(
+        connection_params=StdioConnectionParams(
+            server_params=StdioServerParameters(
+                # Run the Casper MCP server (.NET) as a stdio subprocess via
+                # its published image. `-i` keeps stdin open for the MCP
+                # stream; `--rm` cleans the container up on exit.
+                command="docker",
+                args=[
+                    "run",
+                    "-i",
+                    "--rm",
+                    "ghcr.io/msanlisavas/casper-mcp:latest",
+                    "--api-key",
+                    _CSPR_CLOUD_API_KEY,
+                    "--network",
+                    _CASPER_NETWORK,
+                ],
+                env={
+                    "PATH": os.environ.get("PATH", ""),
+                },
+            ),
+            # First `docker run` pulls the image (~tens of MB); give it room.
+            timeout=120,
+        ),
+    )
+    _tools.append(casper_mcp)
+    _casper_instruction = (
+        "\n"
+        "CASPER NETWORK (via the third MCP partner — `casper-mcp`):\n"
+        f"- You can read Casper {_CASPER_NETWORK} on-chain state through the "
+        "  Casper MCP tools (account balances, deploys, CEP-18 token "
+        "  balances, transfers, contract state, network status).\n"
+        "- Use them when the user asks about on-chain facts: their CSPR or "
+        "  CEP-18 balance, whether a payment/deploy settled, a transfer's "
+        "  status, or a contract's state. KaJota settles premium agent "
+        "  payments on Casper via x402, so 'did my payment go through?' is a "
+        "  Casper query (look up the deploy hash).\n"
+        "- These are READ tools — report what the chain says, never fabricate "
+        "  a balance, deploy hash, or transfer. If a lookup returns nothing, "
+        "  say so.\n"
+    )
+
 # ---- Agent definition --------------------------------------------
 
 root_agent = Agent(
@@ -252,6 +327,7 @@ root_agent = Agent(
         "  Strict valid JSON inside the block (double-quoted keys and "
         "  values). One card per item. Omit the block entirely on "
         "  non-product turns (greetings, clarifying questions, errors).\n"
-    ),
-    tools=[mongodb_mcp, fetch_mcp],
+    )
+    + _casper_instruction,
+    tools=_tools,
 )
