@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Scene 4 — Shield verify</title>
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --ink: #e8ecf5;
+    --muted: #8691a8;
+    --accent: #ff6b4a;
+    --accent-ok: #4ade80;
+    --accent-bad: #ff4a6b;
+    --rule: #1f2a44;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Inter", "Helvetica Neue", sans-serif;
+  }
+  html, body { margin: 0; padding: 0; width: 1920px; height: 1080px; overflow: hidden;
+    background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  .frame { display: grid; grid-template-rows: 60px 1fr 60px; height: 100%; padding: 50px 60px; box-sizing: border-box; }
+  .top { display: flex; justify-content: space-between; align-items: center; color: var(--muted);
+    font-size: 22px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; height: 100%; }
+  .panel { background: #0c1326; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden;
+    display: flex; flex-direction: column; }
+  .panel .head { display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 28px; border-bottom: 1px solid var(--rule); background: #111833; }
+  .panel .head .name { font-family: var(--mono); font-size: 20px; color: var(--muted); }
+  .panel .head .tag { font-family: var(--mono); font-size: 18px; color: var(--accent); }
+  .panel .body { padding: 28px 32px; font-family: var(--mono); font-size: 19px; line-height: 1.55;
+    color: var(--ink); white-space: pre-wrap; overflow: hidden; flex: 1; }
+  .panel .body .muted { color: var(--muted); }
+  .panel .body .ok { color: var(--accent-ok); }
+  .panel .body .bad { color: var(--accent-bad); font-weight: 700; }
+  .panel .body .accent { color: var(--accent); }
+  .nearblocks .body { background: #0a1020; }
+  .nearblocks .row { display: flex; padding: 8px 0; border-bottom: 1px dashed #1a2440; }
+  .nearblocks .k { color: var(--muted); width: 180px; flex-shrink: 0; }
+  .nearblocks .v { color: var(--ink); word-break: break-all; }
+  .bottom { display: flex; justify-content: space-between; align-items: center; color: var(--muted);
+    font-size: 22px; border-top: 1px solid var(--rule); padding-top: 18px; }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="top">
+      <span>Scene 4 · The replay against #384</span>
+      <span>Shield.emergencyFreeze fires between tx 1 and tx 2</span>
+    </div>
+    <div class="split">
+      <div class="panel nearblocks">
+        <div class="head">
+          <span class="name">nearblocks.io · tx 3djtQ3pU...jCUVD</span>
+          <span class="tag">on-chain</span>
+        </div>
+        <div class="body">
+          <div class="row"><span class="k">signer</span><span class="v">intents.near</span></div>
+          <div class="row"><span class="k">method</span><span class="v">execute_intents</span></div>
+          <div class="row"><span class="k">intent</span><span class="v">transfer</span></div>
+          <div class="row"><span class="k">token</span><span class="v">nep141:hood.omft.near</span></div>
+          <div class="row"><span class="k">amount</span><span class="v">38000000000000000<br>(0.038 ETH)</span></div>
+          <div class="row"><span class="k">quoted</span><span class="v" style="color: var(--accent);">b45e38628bce420c8ebbaf0d2c2c12ec9863c7a0a9a04386d704760c085605c6</span></div>
+          <div class="row"><span class="k">receiver_id</span><span class="v" style="color: var(--accent-bad);">51e8f94d77b5e90dc9852ca6113771e11e8382ce69473a75e313e41665de7cbe</span></div>
+        </div>
+      </div>
+      <div class="panel terminal">
+        <div class="head">
+          <span class="name">$ make replay-384-fixture</span>
+          <span class="tag">Shield verifier</span>
+        </div>
+        <div class="body"><span class="muted">[replay-384] fetching NEAR mainnet state for near/intents#384</span>
+<span class="muted">[replay-384] tx 1/2: deposit 1  tx=3djtQ3pU...</span>
+<span class="muted">[replay-384]   quoted:   b45e3862...5605c6</span>
+<span class="muted">[replay-384]   actual:   51e8f94d...de7cbe</span>
+<span class="bad">[replay-384]   Shield verdict: MISMATCH</span>
+<span class="bad">[replay-384]   Shield.emergencyFreeze(agent=coach-ndfkey01)</span>
+
+<span class="muted">[replay-384] tx 2/2: deposit 2 (jNeJZQ4pa4...)</span>
+<span class="accent">[replay-384]   agent is frozen — Shield skips signing</span>
+<span class="accent">[replay-384]   1e15 of nep141:hood.omft.near <span class="ok">spared</span></span>
+
+<span class="muted">[replay-384] — replay complete —</span>
+<span class="ok">[replay-384] verdict: Shield correctly flagged near/intents#384</span>
+<span class="ok">[replay-384] and halted the agent before the second signature.</span>
+</div>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>Pre-sign policy would have signed both. Post-sign check caught it.</span>
+      <span>github.com/KaJota-inc/kajota-coach</span>
+    </div>
+  </div>
+</body>
+</html>

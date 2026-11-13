@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Scene 2 — Pitch</title>
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --ink: #e8ecf5;
+    --muted: #8691a8;
+    --accent: #ff6b4a;
+    --accent-2: #4a9eff;
+    --accent-3: #4ade80;
+    --rule: #1f2a44;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Inter", "Helvetica Neue", sans-serif;
+  }
+  html, body { margin: 0; padding: 0; width: 1920px; height: 1080px; overflow: hidden;
+    background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  .frame { display: grid; grid-template-rows: 60px 1fr 80px; height: 100%; padding: 60px 90px; box-sizing: border-box; }
+  .top { display: flex; justify-content: space-between; align-items: center; color: var(--muted);
+    font-size: 24px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .mid { display: flex; flex-direction: column; justify-content: center; }
+  .eyebrow { font-size: 32px; color: var(--muted); letter-spacing: 0.14em;
+    text-transform: uppercase; margin-bottom: 32px; }
+  .title { font-size: 128px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 20px 0; }
+  .title span { padding: 0 20px; }
+  .shield { color: var(--accent); }
+  .mesh { color: var(--accent-3); }
+  .coach { color: var(--accent-2); }
+  .tag { font-size: 44px; color: var(--ink); margin: 0 0 50px 0; line-height: 1.3; max-width: 1600px; }
+  .tag .pop { color: var(--accent); font-weight: 700; }
+  .flow { display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 24px; color: var(--muted); }
+  .flow .pill { background: var(--rule); border: 1px solid #2a3858; padding: 12px 22px; border-radius: 8px; color: var(--ink); }
+  .flow .arrow { color: var(--accent); font-size: 32px; }
+  .bottom { display: flex; justify-content: space-between; align-items: center; color: var(--muted);
+    font-size: 24px; border-top: 1px solid var(--rule); padding-top: 24px; }
+  .tracks { display: inline-flex; gap: 14px; }
+  .tracks .t { background: var(--rule); color: var(--accent); padding: 6px 14px; border-radius: 6px;
+    font-family: var(--mono); font-size: 22px; }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="top">
+      <span>Shield · Mesh · Coach</span>
+      <span>Tracks: <span class="tracks"><span class="t">security</span><span class="t">business</span><span class="t">agents</span></span></span>
+    </div>
+    <div class="mid">
+      <div class="eyebrow">The pitch</div>
+      <h1 class="title"><span class="shield">Shield</span>·<span class="mesh">Mesh</span>·<span class="coach">Coach</span></h1>
+      <p class="tag"><span class="pop">Post-signature destination verification</span><br>
+        that catches what OutLayer's pre-sign policy misses.</p>
+      <div class="flow">
+        <span class="pill" style="color: var(--accent-2);">Coach</span>
+        <span class="arrow">→</span>
+        <span class="pill">NEAR Intents</span>
+        <span class="arrow">→</span>
+        <span class="pill" style="color: var(--accent-3);">Mesh N-party split</span>
+        <span class="arrow">→</span>
+        <span class="pill" style="color: var(--accent);">Shield verify</span>
+        <span class="arrow">→</span>
+        <span class="pill">on-chain transfer</span>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>FHE spend mandate · kill switch · post-sign verifier</span>
+      <span>Fires after OutLayer approves, not instead of it</span>
+    </div>
+  </div>
+</body>
+</html>

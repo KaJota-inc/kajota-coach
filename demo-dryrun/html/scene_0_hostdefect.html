@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Scene 0 — HOST defect</title>
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --ink: #e8ecf5;
+    --muted: #8691a8;
+    --accent: #ff6b4a;
+    --rule: #1f2a44;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Inter", "Helvetica Neue", sans-serif;
+  }
+  html, body { margin: 0; padding: 0; width: 1920px; height: 1080px; overflow: hidden;
+    background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  .frame { display: grid; grid-template-rows: 60px 1fr 80px; height: 100%; padding: 60px 90px; box-sizing: border-box; }
+  .top { display: flex; justify-content: space-between; align-items: center; color: var(--muted);
+    font-size: 24px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .mid { display: flex; flex-direction: column; justify-content: center; }
+  .eyebrow { font-size: 36px; color: var(--accent); font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 36px; }
+  .h1 { font-size: 92px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em;
+    margin: 0 0 28px 0; }
+  .h1 b { color: var(--accent); }
+  .sub { font-size: 36px; color: var(--muted); line-height: 1.45; max-width: 1400px; }
+  .sub code { font-family: var(--mono); color: var(--ink); background: var(--rule);
+    padding: 2px 12px; border-radius: 6px; font-size: 32px; }
+  .bottom { display: flex; justify-content: space-between; align-items: center; color: var(--muted);
+    font-size: 24px; border-top: 1px solid var(--rule); padding-top: 24px; }
+  .receipts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 36px; margin-top: 60px; }
+  .receipt { background: #111833; border: 1px solid var(--rule); border-radius: 12px;
+    padding: 28px 32px; font-family: var(--mono); }
+  .receipt .label { color: var(--muted); font-size: 22px; text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 14px; }
+  .receipt .hash { color: var(--ink); font-size: 24px; word-break: break-all; }
+  .receipt .status { margin-top: 18px; display: inline-block; font-size: 22px;
+    padding: 4px 14px; border-radius: 6px; background: #1a3d2e; color: #4ade80; }
+  .receipt .balance { margin-top: 18px; color: var(--accent); font-size: 26px; }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="top">
+      <span>near/intents#384 · open</span>
+      <span>Built at NEAR HACKATHON</span>
+    </div>
+    <div class="mid">
+      <div class="eyebrow">The HOST defect</div>
+      <h1>Confidential swaps return <b>SUCCESS</b>.<br>Money lands in the wrong account.</h1>
+      <div class="sub">Two on-chain receipts. API said <code>status: SUCCESS</code>.
+        Recipient balance on <code>intents.near</code>: <code>"0"</code>.</div>
+      <div class="receipts">
+        <div class="receipt">
+          <div class="label">deposit 1 · 0.038 ETH</div>
+          <div class="hash">3djtQ3pUHv8SGtNKS3CMGice7E7S9oeS4DJzNYyjCUVD</div>
+          <span class="status">API: SUCCESS</span>
+          <div class="balance">→ sink 51e8f94d...de7cbe</div>
+        </div>
+        <div class="receipt">
+          <div class="label">deposit 2 · 0.001 ETH</div>
+          <div class="hash">jNeJZQ4pa4p69LBiEvTDbTj2WmhCgiKRY2a2scA193j</div>
+          <span class="status">API: SUCCESS</span>
+          <div class="balance">→ sink 51e8f94d...de7cbe</div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>github.com/near/intents/issues/384</span>
+      <span>2026-10-18 · 0 maintainer comments</span>
+    </div>
+  </div>
+</body>
+</html>
