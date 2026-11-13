@@ -29,7 +29,16 @@
 
 Form footer provides a `Request changes` link. One submission per project; that link is the only edit path.
 
-## Optional stretch items (not blocking judging)
+## Stretch items
 
-- Comment on `near/intents#385` — body in `UPSTREAM_PR_DRAFT.md`
+### ✅ Gate #3 anchor — upstream contribution on `near/intents`
+
+- **Comment posted:** https://github.com/near/intents/issues/385#issuecomment-6861182741
+- **Author:** `@KaJota-inc` (org account, same as the repo link above)
+- **Posted:** 2026-11-13T18:14:28Z — 5 minutes after submission
+- **Content:** verbatim replacement block for the BTC-deposit-refund timelock table, with the live on-chain `unsafe_refund_timelock_sec = 3153600000` values (re-verified via mainnet RPC 2026-11-13T18:10Z — unchanged from the Nov 2 draft)
+- **Issue state at posting:** open, 0 prior comments
+
+### ⏳ Not yet posted
+
 - SDK PR on `defuse-protocol/one-click-sdk-typescript` — files under `sdk-pr-files/`
